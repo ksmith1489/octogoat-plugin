@@ -393,31 +393,7 @@ def build_resumed_gcode(
     header.append("M83 ; relative extrusion (Lazarus-safe)")
     header.append("G92 E0 ; reset extruder")
 
-    # Optional minimal console messages (light CYA, non-spammy)
-    if include_user_check_messages:
-        if fw == "klipper":
-            header.extend([
-                "; --- LAZARUS USER CHECK ---",
-                'RESPOND MSG=" last second check nozzle bed up to temp?"',
-                'RESPOND MSG=" Axis homed? nozzle above print? Z-toggle ready?."',
-                'RESPOND MSG=" they said it was impossible after machine loses internal geometry."',
-                'RESPOND MSG="LAZARUS: tens of millions of metric tons of filament in the trash!."',
-                'RESPOND MSG="LAZARUS: oh you of little faith.  Roll away the stone!.",
-                'RESPOND MSG="LAZARUS:  Lazarus, come forth!!!!!!!!!.",
-                "; --- END USER CHECK ---",
-                "G4 S2",
-            ])
-        else:
-            header.extend([
-                "; --- LAZARUS USER CHECK ---",
-                "M117 LAZARUS: CHECK RESUME",
-                "M118 LAZARUS: Check temps/clearance. Z-toggle ready.",
-                "M118 LAZARUS: last chance... so be it... Roll away the stone!",
-                "M118 LAZARUS: Lazarus, come forth!!!!!!!!!.",
-                "; --- END USER CHECK ---",
-                "G4 S2",
-            ])
-
+    
     # Feedrate inheritance: insert the last motion feedrate we saw before anchor
     # (taken from the user's slicer, not invented).
     if inject_last_motion_feedrate and anchor.last_motion_f is not None:
