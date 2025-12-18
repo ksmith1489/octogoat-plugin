@@ -39,10 +39,14 @@ from flask import Flask, request, render_template_string, send_file, redirect, u
 
 # ===================== CONFIG =====================
 
-BETA_ACCESS_CODE = "beta"
+BETA_ACCESS_CODE = os.environ.get("BETA_ACCESS_CODE", "beta")
 
 app = Flask(__name__)
-app.secret_key = "change_this_secret_key_later"
+app.secret_key = os.environ.get(
+    "FLASK_SECRET_KEY",
+    "dev-only-secret"
+)
+
 
 GENERATED: Dict[str, Dict[str, object]] = {}
 GENERATED_TTL_SECONDS = 20 * 60  # 20 minutes
