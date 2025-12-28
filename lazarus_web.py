@@ -37,7 +37,7 @@ import time
 
 from flask import Flask, request, render_template_string, send_file, redirect, url_for, flash
 
-================= CONFIG =====================
+#================= CONFIG =====================
 
 BETA_ACCESS_CODE = os.environ.get("BETA_ACCESS_CODE", "beta")
 
