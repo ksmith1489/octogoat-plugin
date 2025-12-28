@@ -37,11 +37,21 @@ import time
 
 from flask import Flask, request, render_template_string, send_file, redirect, url_for, flash
 
-# ===================== CONFIG =====================
+================= CONFIG =====================
 
 BETA_ACCESS_CODE = os.environ.get("BETA_ACCESS_CODE", "beta")
 
 app = Flask(__name__)
+
+@app.before_request
+def _log_req():
+    ip = (request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+          or request.headers.get("X-Real-IP")
+          or request.remote_addr)
+    ua = request.headers.get("User-Agent", "")
+    path = request.path
+    ref = request.headers.get("Referer", "")
+    print(f"REQ ip={ip} path={path} ua={ua} ref={ref}", flush=True)
 app.secret_key = os.environ.get(
     "FLASK_SECRET_KEY",
     "dev-only-secret"
