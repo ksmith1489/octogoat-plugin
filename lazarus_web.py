@@ -24,7 +24,6 @@ Run:
 Open:
   http://127.0.0.1:5000
 """
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -42,6 +41,7 @@ from flask import Flask, request, render_template_string, send_file, redirect, u
 BETA_ACCESS_CODE = os.environ.get("BETA_ACCESS_CODE", "beta")
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-only-secret")
 
 @app.before_request
 def _log_req():
@@ -52,11 +52,6 @@ def _log_req():
     path = request.path
     ref = request.headers.get("Referer", "")
     print(f"REQ ip={ip} path={path} ua={ua} ref={ref}", flush=True)
-app.secret_key = os.environ.get(
-    "FLASK_SECRET_KEY",
-    "dev-only-secret"
-)
-
 
 GENERATED: Dict[str, Dict[str, object]] = {}
 GENERATED_TTL_SECONDS = 20 * 60  # 20 minutes
@@ -64,8 +59,6 @@ GENERATED_TTL_SECONDS = 20 * 60  # 20 minutes
 # Anchor and Z matching tolerances
 DEFAULT_Z_MATCH_TOL = 0.05  # mm: "at/after RH within a bite"
 DEFAULT_Z_FLOOR_TOL = 0.05  # mm: never allow Z below RH - tol
-
-# ===================== ENGINE =====================
 
 @dataclass
 class AnchorResult:
@@ -694,9 +687,7 @@ def download(token: str):
 
 @app.route("/app", methods=["GET", "POST"])
 def app_entry():
-    return redirect(url_for("index"))  
-
+    return index()
 
 if __name__ == "__main__":
-    # Use 0.0.0.0 if you want to hit it from your phone on the same network.
     app.run(host="127.0.0.1", port=5000, debug=True)
