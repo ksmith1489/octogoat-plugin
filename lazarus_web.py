@@ -691,6 +691,9 @@ def download(token: str):
         as_attachment=True,
         download_name=str(name),
     )
+@app.route("/app")
+def app_entry():
+    return redirect(url_for("index"))
 
 
 if __name__ == "__main__":
