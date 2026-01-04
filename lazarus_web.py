@@ -692,7 +692,7 @@ def download(token: str):
         download_name=str(name),
     )
 
-@app.route("/app")
+@app.route("/app", methods=["GET", "POST"])
 def app_entry():
     return redirect(url_for("index"))  
 
