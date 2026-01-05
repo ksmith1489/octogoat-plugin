@@ -38,7 +38,6 @@ from flask import Flask, request, render_template_string, send_file, redirect, u
 
 #================= CONFIG =====================
 
-BETA_ACCESS_CODE = os.environ.get("BETA_ACCESS_CODE", "beta")
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-only-secret")
@@ -561,110 +560,6 @@ def _cleanup_generated() -> None:
         GENERATED.pop(k, None)
 
 
-@app.route("/", methods=["GET", "POST"])
-def index():
-    _cleanup_generated()
-
-    if request.method == "GET":
-        return render_template_string(
-            HTML_PAGE,
-            preview=None,
-            token=None,
-            preview_lines=220,
-            resume_z=None,
-            form={
-                "firmware": "klipper",
-                "layer_height": "",
-                "print_height": "",
-                "z_match_tol": "0.05",
-                "z_floor_tol": "0.05",
-                "inject_f": True,
-                "user_msgs": True,
-            },
-        )
-
-    beta_code = (request.form.get("beta_code") or "").strip()
-    if beta_code != BETA_ACCESS_CODE:
-        flash("Invalid beta access code.")
-        return redirect(url_for("index"))
-
-    file = request.files.get("gcode_file")
-    if not file or file.filename == "":
-        flash("Please upload a G-code file.")
-        return redirect(url_for("index"))
-
-    try:
-        original_text = file.read().decode("utf-8", errors="ignore")
-    except Exception as e:
-        flash(f"Could not read file: {e}")
-        return redirect(url_for("index"))
-
-    form_state = {
-        "firmware": (request.form.get("firmware") or "klipper").strip().lower(),
-        "layer_height": request.form.get("layer_height", ""),
-        "print_height": request.form.get("print_height", ""),
-        "z_match_tol": request.form.get("z_match_tol", "0.05"),
-        "z_floor_tol": request.form.get("z_floor_tol", "0.05"),
-        "inject_f": (request.form.get("inject_f") in ("1", "on", "true", "True")),
-        "user_msgs": (request.form.get("user_msgs") in ("1", "on", "true", "True")),
-    }
-
-    try:
-        layer_h = float(str(form_state["layer_height"]).strip())
-        print_h = float(str(form_state["print_height"]).strip())
-        z_match_tol = float(str(form_state["z_match_tol"]).strip() or "0.05")
-        z_floor_tol = float(str(form_state["z_floor_tol"]).strip() or "0.05")
-    except Exception:
-        flash("Invalid numeric input. Check layer height / print height / tolerances.")
-        return redirect(url_for("index"))
-
-    if layer_h <= 0:
-        flash("Layer height must be > 0.")
-        return redirect(url_for("index"))
-    if print_h < 0:
-        flash("Print height must be >= 0.")
-        return redirect(url_for("index"))
-    if z_match_tol < 0:
-        z_match_tol = DEFAULT_Z_MATCH_TOL
-    if z_floor_tol < 0:
-        z_floor_tol = DEFAULT_Z_FLOOR_TOL
-
-    try:
-        new_gcode, resume_z = build_resumed_gcode(
-            original_gcode_text=original_text,
-            firmware=form_state["firmware"],
-            layer_height_mm=layer_h,
-            print_height_mm=print_h,
-            z_match_tol=z_match_tol,
-            z_floor_tol=z_floor_tol,
-            inject_last_motion_feedrate=bool(form_state["inject_f"]),
-            include_user_check_messages=bool(form_state["user_msgs"]),
-        )
-    except Exception as e:
-        flash(f"Error generating recovery G-code: {e}")
-        return redirect(url_for("index"))
-
-    # Store for download
-    token = secrets.token_urlsafe(16)
-    base_name = os.path.splitext(file.filename or "resume")[0]
-    out_name = f"{base_name}_LAZARUS_RH_{resume_z:.3f}.gcode"
-    GENERATED[token] = {"bytes": new_gcode.encode("utf-8"), "name": out_name, "ts": time.time()}
-
-    # Preview first N lines
-    preview_lines = 220
-    lines = new_gcode.splitlines()
-    preview = "\n".join(lines[:preview_lines])
-
-    return render_template_string(
-        HTML_PAGE,
-        preview=preview,
-        token=token,
-        preview_lines=preview_lines,
-        resume_z=f"{resume_z:.3f}",
-        form=form_state,
-    )
-
-
 # ✅ BOTTOM BLOCK: REPLACE your "/" route decorator + DELETE your "/app" redirect route
 
 @app.route("/", methods=["GET", "POST"])
@@ -689,12 +584,6 @@ def index():
                 "user_msgs": True,
             },
         )
-
-    beta_code = (request.form.get("beta_code") or "").strip()
-    if beta_code != BETA_ACCESS_CODE:
-        flash("Invalid beta access code.")
-        return redirect(url_for("index"))
-
     file = request.files.get("gcode_file")
     if not file or file.filename == "":
         flash("Please upload a G-code file.")
