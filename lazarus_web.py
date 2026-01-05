@@ -425,6 +425,11 @@ HTML_PAGE = r"""
 <head>
   <meta charset="utf-8">
   <title>Lazarus – Print Resurrection Lab</title>
+  
+  <!-- Memberstack -->
+  <script data-memberstack-id="app_cmjfk6pl8005z0tsh0b64027x"
+          src="https://static.memberstack.com/scripts/v1/memberstack.js"></script>
+  
   <style>
     body { font-family: sans-serif; background:#111; color:#eee; padding:20px; }
     h1 { margin: 0 0 4px 0; }
@@ -476,9 +481,6 @@ HTML_PAGE = r"""
             <option value="klipper" {% if form.firmware=='klipper' %}selected{% endif %}>Klipper</option>
             <option value="marlin"  {% if form.firmware=='marlin' %}selected{% endif %}>Marlin</option>
           </select>
-        </label>
-        <label>Beta access code:
-          <input type="password" name="beta_code" required>
         </label>
       </div>
 
