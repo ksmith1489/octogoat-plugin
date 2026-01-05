@@ -426,7 +426,7 @@ HTML_PAGE = r"""
   <title>Lazarus – Print Resurrection Lab</title>
   
   <!-- Memberstack -->
-  <script data-memberstack-id="app_cmjfk6pl8005z0tsh0b64027x"
+  <script data-memberstack-app="app_cmjfk6pl8005z0tsh0b64027x"
           src="https://static.memberstack.com/scripts/v1/memberstack.js"></script>
   
   <style>
