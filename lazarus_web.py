@@ -25,10 +25,8 @@ HTML_PAGE = r"""
   
   <style>
     /* 2. Security Lock: Hide app content by default */
-    #app-content { visibility: hidden; }
-    /* Show it only when Memberstack confirms a valid member */
-    .ms-member #app-content { visibility: visible; }
-
+      /* Show it only when Memberstack confirms a valid member */
+    
     /* Your Existing Styles */
     body { font-family: sans-serif; background:#111; color:#eee; padding:20px; }
     h1 { margin: 0 0 4px 0; }
