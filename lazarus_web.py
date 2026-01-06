@@ -1,4 +1,17 @@
 #!/usr/bin/env python3
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple
+import io
+import os
+import re
+import secrets
+import time
+
+from flask import Flask, request, render_template_string, send_file, redirect, url_for, flash
+
 HTML_PAGE = r"""
 <!doctype html>
 <html>
@@ -163,17 +176,6 @@ Run:
 Open:
   http://127.0.0.1:5000
 """
-from __future__ import annotations
-
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
-import io
-import os
-import re
-import secrets
-import time
-
-from flask import Flask, request, render_template_string, send_file, redirect, url_for, flash
 
 #================= CONFIG =====================
 
