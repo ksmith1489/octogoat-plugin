@@ -22,7 +22,7 @@ HTML_PAGE = r"""
   <!-- 1. Memberstack Script (The Gate) -->
   <script 
   data-memberstack-app="app_cmjfk6pl8005z0tsh0b64027x" 
-  src="https://static.memberstack.com/scripts/v1/memberstack.js" 
+  src="https://static.memberstack.com/scripts/v2/memberstack.js" 
   type="text/javascript">
 </script>
   
