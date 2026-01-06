@@ -20,8 +20,11 @@ HTML_PAGE = r"""
   <title>Lazarus – Print Resurrection Lab</title>
   
   <!-- 1. Memberstack Script (The Gate) -->
-  <script data-memberstack-id="app_cmjfk6pl8005z0tsh0b64027x"
-          src="https://static.memberstack.com/scripts/v1/memberstack.js"></script>
+  <script 
+  data-memberstack-app="app_cmjfk6pl8005z0tsh0b64027x" 
+  src="https://static.memberstack.com/scripts/v1/memberstack.js" 
+  type="text/javascript">
+</script>
   
   <style>
     /* 2. Security Lock: Hide app content by default */
