@@ -1,4 +1,143 @@
 #!/usr/bin/env python3
+HTML_PAGE = r"""
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Lazarus – Print Resurrection Lab</title>
+  
+  <!-- 1. Memberstack Script (The Gate) -->
+  <script data-memberstack-id="app_cmjfk6pl8005z0tsh0b64027x"
+          src="https://static.memberstack.com/scripts/v1/memberstack.js"></script>
+  
+  <style>
+    /* 2. Security Lock: Hide app content by default */
+    #app-content { visibility: hidden; }
+    /* Show it only when Memberstack confirms a valid member */
+    .ms-member #app-content { visibility: visible; }
+
+    /* Your Existing Styles */
+    body { font-family: sans-serif; background:#111; color:#eee; padding:20px; }
+    h1 { margin: 0 0 4px 0; }
+    small { color:#aaa; }
+    .card { background:#1b1b1b; padding:15px 20px; border-radius:10px; max-width:920px; }
+    label { display:block; margin-top:10px; }
+    input[type=number], input[type=password], select {
+      width: 280px; padding:6px; margin-top:4px; background:#222; color:#eee;
+      border:1px solid #444; border-radius:6px;
+    }
+    input[type=file] { margin-top:6px; }
+    .row { display:flex; gap:16px; flex-wrap:wrap; margin-top:8px; }
+    .btn { margin-top:14px; padding:10px 16px; background:#3a7; border:none; color:#fff;
+           border-radius:8px; cursor:pointer; font-weight:bold; }
+    .btn:hover { background:#4b8; }
+    .btn2 { margin-top:14px; padding:10px 16px; background:#345; border:none; color:#fff;
+           border-radius:8px; cursor:pointer; font-weight:bold; text-decoration:none; display:inline-block; }
+    .btn2:hover { background:#456; }
+    .flash { background:#662222; padding:10px 12px; border-radius:8px; margin-bottom:10px; }
+    pre { background:#0d0d0d; border:1px solid #333; padding:10px; border-radius:10px; overflow:auto; max-height:460px; }
+    hr { border-color:#333; margin:14px 0; }
+    .danger { color:#f66; font-size:0.95em; }
+    details { margin-top:10px; }
+    code { background:#222; padding:2px 6px; border-radius:6px; border:1px solid #333; }
+  </style>
+</head>
+<body>
+  <!-- 3. Wrap everything in app-content -->
+  <div id="app-content">
+      <h1>Lazarus</h1>
+      <small>Two-input build: layer height + print height</small>
+      <br><br>
+
+      <div class="card">
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for m in messages %}
+              <div class="flash">{{ m }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form method="post" enctype="multipart/form-data">
+           <label>Original G-code file:
+        <input type="file" name="gcode_file" required>
+      </label>
+
+      <div class="row">
+        <label>Firmware:
+          <select name="firmware">
+            <option value="klipper" {% if form.firmware=='klipper' %}selected{% endif %}>Klipper</option>
+            <option value="marlin"  {% if form.firmware=='marlin' %}selected{% endif %}>Marlin</option>
+          </select>
+        </label>
+      </div>
+
+      <hr>
+
+      <div class="row">
+        <label>Layer height (mm):
+          <input type="number" step="0.001" name="layer_height" value="{{ form.layer_height or '' }}" required>
+        </label>
+        <label>Measured print height (mm):
+          <input type="number" step="0.01" name="print_height" value="{{ form.print_height or '' }}" required>
+        </label>
+      </div>
+
+      <div class="row">
+        <label>Z match tolerance (mm) (default {{ form.z_match_tol or '0.05' }}):
+          <input type="number" step="0.01" name="z_match_tol" value="{{ form.z_match_tol or '0.05' }}">
+        </label>
+        <label>Z floor guard (mm) (default {{ form.z_floor_tol or '0.05' }}):
+          <input type="number" step="0.01" name="z_floor_tol" value="{{ form.z_floor_tol or '0.05' }}">
+        </label>
+      </div>
+
+      <div class="row">
+        <label>
+          <input type="checkbox" name="inject_f" value="1" {% if form.inject_f %}checked{% endif %}>
+          Inherit slicer feedrate near anchor (recommended)
+        </label>
+        <label>
+          <input type="checkbox" name="user_msgs" value="1" {% if form.user_msgs %}checked{% endif %}>
+          Add short console checklist (recommended)
+        </label>
+      </div>
+
+      <div class="danger" style="margin-top:8px;">
+        Read and follow instructions before generating the resumed file.
+      </div>
+
+      <button class="btn" type="submit">Preview + Generate</button>
+    </form>
+
+    {% if preview %}
+      <hr>
+      <h3 style="margin:0 0 6px 0;">Preview (first {{ preview_lines }} lines)</h3>
+      <div style="color:#aaa; margin-bottom:10px;">
+        Computed RH: <b>{{ resume_z }}</b> mm
+      </div>
+      <pre>{{ preview }}</pre>
+
+      {% if token %}
+        <a class="btn2" href="{{ url_for('download', token=token) }}">Download resumed G-code</a>
+      {% endif %}
+    {% endif %}
+
+    <hr>
+    <details>
+      <summary style="cursor:pointer; color:#aaa; font-weight:bold;">Measuring tip (fast + accurate)</summary>
+      <div style="margin-top:10px; color:#ddd; line-height:1.45;">
+        Home Z normally (bed as truth), then jog Z up to the top of the print and read the Z value.
+        Enter that as <code>Measured print height</code>. Lazarus rounds to the nearest multiple of layer height.
+      </div>
+    </details>
+
+  </div>
+</body>
+</html>
+
+"""
+
 """
 lazarus_web.py
 
@@ -416,139 +555,6 @@ def build_resumed_gcode(
     return "\n".join(out_lines) + "\n", resume_z
 
 
-# ===================== WEB UI =====================
-
-HTML_PAGE = r"""
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Lazarus – Print Resurrection Lab</title>
-  
-  <!-- Memberstack -->
-  <script data-memberstack-app="app_cmjfk6pl8005z0tsh0b64027x"
-          src="https://static.memberstack.com/scripts/v1/memberstack.js"></script>
-  
-  <style>
-    body { font-family: sans-serif; background:#111; color:#eee; padding:20px; }
-    h1 { margin: 0 0 4px 0; }
-    small { color:#aaa; }
-    .card { background:#1b1b1b; padding:15px 20px; border-radius:10px; max-width:920px; }
-    label { display:block; margin-top:10px; }
-    input[type=number], input[type=password], select {
-      width: 280px; padding:6px; margin-top:4px; background:#222; color:#eee;
-      border:1px solid #444; border-radius:6px;
-    }
-    input[type=file] { margin-top:6px; }
-    .row { display:flex; gap:16px; flex-wrap:wrap; margin-top:8px; }
-    .btn { margin-top:14px; padding:10px 16px; background:#3a7; border:none; color:#fff;
-           border-radius:8px; cursor:pointer; font-weight:bold; }
-    .btn:hover { background:#4b8; }
-    .btn2 { margin-top:14px; padding:10px 16px; background:#345; border:none; color:#fff;
-           border-radius:8px; cursor:pointer; font-weight:bold; text-decoration:none; display:inline-block; }
-    .btn2:hover { background:#456; }
-    .flash { background:#662222; padding:10px 12px; border-radius:8px; margin-bottom:10px; }
-    pre { background:#0d0d0d; border:1px solid #333; padding:10px; border-radius:10px; overflow:auto; max-height:460px; }
-    hr { border-color:#333; margin:14px 0; }
-    .danger { color:#f66; font-size:0.95em; }
-    details { margin-top:10px; }
-    code { background:#222; padding:2px 6px; border-radius:6px; border:1px solid #333; }
-  </style>
-</head>
-<body>
-  <h1>Lazarus</h1>
-  <small>Two-input build: layer height + print height</small>
-  <br><br>
-
-  <div class="card">
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        {% for m in messages %}
-          <div class="flash">{{ m }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <form method="post" enctype="multipart/form-data">
-      <label>Original G-code file:
-        <input type="file" name="gcode_file" required>
-      </label>
-
-      <div class="row">
-        <label>Firmware:
-          <select name="firmware">
-            <option value="klipper" {% if form.firmware=='klipper' %}selected{% endif %}>Klipper</option>
-            <option value="marlin"  {% if form.firmware=='marlin' %}selected{% endif %}>Marlin</option>
-          </select>
-        </label>
-      </div>
-
-      <hr>
-
-      <div class="row">
-        <label>Layer height (mm):
-          <input type="number" step="0.001" name="layer_height" value="{{ form.layer_height or '' }}" required>
-        </label>
-        <label>Measured print height (mm):
-          <input type="number" step="0.01" name="print_height" value="{{ form.print_height or '' }}" required>
-        </label>
-      </div>
-
-      <div class="row">
-        <label>Z match tolerance (mm) (default {{ form.z_match_tol or '0.05' }}):
-          <input type="number" step="0.01" name="z_match_tol" value="{{ form.z_match_tol or '0.05' }}">
-        </label>
-        <label>Z floor guard (mm) (default {{ form.z_floor_tol or '0.05' }}):
-          <input type="number" step="0.01" name="z_floor_tol" value="{{ form.z_floor_tol or '0.05' }}">
-        </label>
-      </div>
-
-      <div class="row">
-        <label>
-          <input type="checkbox" name="inject_f" value="1" {% if form.inject_f %}checked{% endif %}>
-          Inherit slicer feedrate near anchor (recommended)
-        </label>
-        <label>
-          <input type="checkbox" name="user_msgs" value="1" {% if form.user_msgs %}checked{% endif %}>
-          Add short console checklist (recommended)
-        </label>
-      </div>
-
-      <div class="danger" style="margin-top:8px;">
-        Read and follow instructions before generating the resumed file.
-      </div>
-
-      <button class="btn" type="submit">Preview + Generate</button>
-    </form>
-
-    {% if preview %}
-      <hr>
-      <h3 style="margin:0 0 6px 0;">Preview (first {{ preview_lines }} lines)</h3>
-      <div style="color:#aaa; margin-bottom:10px;">
-        Computed RH: <b>{{ resume_z }}</b> mm
-      </div>
-      <pre>{{ preview }}</pre>
-
-      {% if token %}
-        <a class="btn2" href="{{ url_for('download', token=token) }}">Download resumed G-code</a>
-      {% endif %}
-    {% endif %}
-
-    <hr>
-    <details>
-      <summary style="cursor:pointer; color:#aaa; font-weight:bold;">Measuring tip (fast + accurate)</summary>
-      <div style="margin-top:10px; color:#ddd; line-height:1.45;">
-        Home Z normally (bed as truth), then jog Z up to the top of the print and read the Z value.
-        Enter that as <code>Measured print height</code>. Lazarus rounds to the nearest multiple of layer height.
-      </div>
-    </details>
-
-  </div>
-</body>
-</html>
-"""
-
-
 def _cleanup_generated() -> None:
     now = time.time()
     dead: List[str] = []
@@ -683,4 +689,4 @@ def download(token: str):
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(host="127.0.0.0.0", port=5000, debug=False)
