@@ -29,7 +29,7 @@ HTML_PAGE = r"""
 
   <!-- Memberstack loader -->
   <script
-    data-memberstack-id="app_cmjfk6pl8005z0tsh0b64027x"
+    data-memberstack-app="app_cmjfk6pl8005z0tsh0b64027x"
     src="https://static.memberstack.com/scripts/v1/memberstack.js">
   </script>
 
