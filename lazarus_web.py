@@ -1,6 +1,19 @@
 #!/usr/bin/env python3
-
 from __future__ import annotations
+
+"""
+lazarus_web.py
+
+Single-file Flask app: generate a "resume" G-code safely, using ONLY:
+  - Layer Height (LH)
+  - Measured Print Height (PH)
+
+Run locally:
+  pip install flask
+  python lazarus_web.py
+Open:
+  http://127.0.0.1:5000
+"""
 
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
@@ -12,8 +25,10 @@ import time
 
 from flask import Flask, request, render_template_string, send_file, redirect, url_for, flash
 
-HTML_PAGE = r"""
-<!doctype html>
+
+# ===================== WEB UI =====================
+
+HTML_PAGE = r"""<!doctype html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -27,18 +42,17 @@ HTML_PAGE = r"""
     };
   </script>
 
-  <!-- Memberstack loader -->
+  <!-- Memberstack loader (v1) -->
   <script
-    data-memberstack-app="app_cmjfk6pl8005z0tsh0b64027x"
+    data-memberstack-id="app_cmjfk6pl8005z0tsh0b64027x"
     src="https://static.memberstack.com/scripts/v1/memberstack.js">
   </script>
 
   <style>
-    /* 🔒 SECURITY LOCK */
+    /* 🔒 SECURITY LOCK (CSS hide until Memberstack marks member) */
     #app-content { visibility: hidden; }
     .ms-member #app-content { visibility: visible; }
 
-  
     /* Your Existing Styles */
     body { font-family: sans-serif; background:#111; color:#eee; padding:20px; }
     h1 { margin: 0 0 4px 0; }
@@ -65,135 +79,114 @@ HTML_PAGE = r"""
     code { background:#222; padding:2px 6px; border-radius:6px; border:1px solid #333; }
   </style>
 </head>
-"""
 
 <body>
-  <!-- 3. Wrap everything in app-content -->
+  <!-- EVERYTHING that should be hidden/shown must be inside this div -->
   <div id="app-content">
-      <h1>Lazarus</h1>
-      <small>Two-input build: layer height + print height</small>
-      <br><br>
+    <h1>Lazarus</h1>
+    <small>Two-input build: layer height + print height</small>
+    <br><br>
 
-      <div class="card">
-        {% with messages = get_flashed_messages() %}
-          {% if messages %}
-            {% for m in messages %}
-              <div class="flash">{{ m }}</div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
+    <div class="card">
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          {% for m in messages %}
+            <div class="flash">{{ m }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
 
-        <form method="post" enctype="multipart/form-data">
-           <label>Original G-code file:
-        <input type="file" name="gcode_file" required>
-      </label>
-
-      <div class="row">
-        <label>Firmware:
-          <select name="firmware">
-            <option value="klipper" {% if form.firmware=='klipper' %}selected{% endif %}>Klipper</option>
-            <option value="marlin"  {% if form.firmware=='marlin' %}selected{% endif %}>Marlin</option>
-          </select>
+      <form method="post" enctype="multipart/form-data">
+        <label>Original G-code file:
+          <input type="file" name="gcode_file" required>
         </label>
-      </div>
 
-      <hr>
+        <div class="row">
+          <label>Firmware:
+            <select name="firmware">
+              <option value="klipper" {% if form.firmware=='klipper' %}selected{% endif %}>Klipper</option>
+              <option value="marlin"  {% if form.firmware=='marlin' %}selected{% endif %}>Marlin</option>
+            </select>
+          </label>
+        </div>
 
-      <div class="row">
-        <label>Layer height (mm):
-          <input type="number" step="0.001" name="layer_height" value="{{ form.layer_height or '' }}" required>
-        </label>
-        <label>Measured print height (mm):
-          <input type="number" step="0.01" name="print_height" value="{{ form.print_height or '' }}" required>
-        </label>
-      </div>
+        <hr>
 
-      <div class="row">
-        <label>Z match tolerance (mm) (default {{ form.z_match_tol or '0.05' }}):
-          <input type="number" step="0.01" name="z_match_tol" value="{{ form.z_match_tol or '0.05' }}">
-        </label>
-        <label>Z floor guard (mm) (default {{ form.z_floor_tol or '0.05' }}):
-          <input type="number" step="0.01" name="z_floor_tol" value="{{ form.z_floor_tol or '0.05' }}">
-        </label>
-      </div>
+        <div class="row">
+          <label>Layer height (mm):
+            <input type="number" step="0.001" name="layer_height" value="{{ form.layer_height or '' }}" required>
+          </label>
+          <label>Measured print height (mm):
+            <input type="number" step="0.01" name="print_height" value="{{ form.print_height or '' }}" required>
+          </label>
+        </div>
 
-      <div class="row">
-        <label>
-          <input type="checkbox" name="inject_f" value="1" {% if form.inject_f %}checked{% endif %}>
-          Inherit slicer feedrate near anchor (recommended)
-        </label>
-        <label>
-          <input type="checkbox" name="user_msgs" value="1" {% if form.user_msgs %}checked{% endif %}>
-          Add short console checklist (recommended)
-        </label>
-      </div>
+        <div class="row">
+          <label>Z match tolerance (mm) (default {{ form.z_match_tol or '0.05' }}):
+            <input type="number" step="0.01" name="z_match_tol" value="{{ form.z_match_tol or '0.05' }}">
+          </label>
+          <label>Z floor guard (mm) (default {{ form.z_floor_tol or '0.05' }}):
+            <input type="number" step="0.01" name="z_floor_tol" value="{{ form.z_floor_tol or '0.05' }}">
+          </label>
+        </div>
 
-      <div class="danger" style="margin-top:8px;">
-        Read and follow instructions before generating the resumed file.
-      </div>
+        <div class="row">
+          <label>
+            <input type="checkbox" name="inject_f" value="1" {% if form.inject_f %}checked{% endif %}>
+            Inherit slicer feedrate near anchor (recommended)
+          </label>
+          <label>
+            <input type="checkbox" name="user_msgs" value="1" {% if form.user_msgs %}checked{% endif %}>
+            Add short console checklist (recommended)
+          </label>
+        </div>
 
-      <button class="btn" type="submit">Preview + Generate</button>
-    </form>
+        <div class="danger" style="margin-top:8px;">
+          Read and follow instructions before generating the resumed file.
+        </div>
 
-    {% if preview %}
-      <hr>
-      <h3 style="margin:0 0 6px 0;">Preview (first {{ preview_lines }} lines)</h3>
-      <div style="color:#aaa; margin-bottom:10px;">
-        Computed RH: <b>{{ resume_z }}</b> mm
-      </div>
-      <pre>{{ preview }}</pre>
+        <button class="btn" type="submit">Preview + Generate</button>
+      </form>
 
-      {% if token %}
-        <a class="btn2" href="{{ url_for('download', token=token) }}">Download resumed G-code</a>
+      {% if preview %}
+        <hr>
+        <h3 style="margin:0 0 6px 0;">Preview (first {{ preview_lines }} lines)</h3>
+        <div style="color:#aaa; margin-bottom:10px;">
+          Computed RH: <b>{{ resume_z }}</b> mm
+        </div>
+        <pre>{{ preview }}</pre>
+
+        {% if token %}
+          <a class="btn2" href="{{ url_for('download', token=token) }}">Download resumed G-code</a>
+        {% endif %}
       {% endif %}
-    {% endif %}
 
-    <hr>
-    <details>
-      <summary style="cursor:pointer; color:#aaa; font-weight:bold;">Measuring tip (fast + accurate)</summary>
-      <div style="margin-top:10px; color:#ddd; line-height:1.45;">
-        Home Z normally (bed as truth), then jog Z up to the top of the print and read the Z value.
-        Enter that as <code>Measured print height</code>. Lazarus rounds to the nearest multiple of layer height.
-      </div>
-    </details>
-      </div>
+      <hr>
+      <details>
+        <summary style="cursor:pointer; color:#aaa; font-weight:bold;">Measuring tip (fast + accurate)</summary>
+        <div style="margin-top:10px; color:#ddd; line-height:1.45;">
+          Home Z normally (bed as truth), then jog Z up to the top of the print and read the Z value.
+          Enter that as <code>Measured print height</code>. Lazarus rounds to the nearest multiple of layer height.
+        </div>
+      </details>
+    </div>
   </div>
 </body>
 </html>
-
 """
 
-"""
-lazarus_web.py
 
-Single-file Flask app: generate a "resume" G-code safely, using ONLY:
-  - Layer Height (LH)
-  - Measured Print Height (PH)
-
-Goal:
-- Compute Resume Height (RH) = nearest multiple of LH to PH
-- Scan the original G-code top-to-bottom, tracking current Z from:
-    * motion lines that include Z (G0/G1/G2/G3 ... Z#)
-    * slicer comments like ";Z:9.20"
-- Anchor at the FIRST "real printing move" at/after RH (within tolerance):
-    * motion G0/G1/G2/G3 that includes E and X or Y
-- Strip everything before the anchor.
-- Minimal universal header (no homing, no mesh, no ritual macros, no M220 speed overrides).
-- Preserve slicer speeds: optionally inject the last seen motion feedrate (F) found before anchor
-  to prevent "slow crawl" if the prior modal feedrate was a slow Z move.
-
-Run:
-  pip install flask
-  python lazarus_web.py
-Open:
-  http://127.0.0.1:5000
-"""
-
-#================= CONFIG =====================
-
+# ===================== FLASK + CORE LOGIC =====================
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-only-secret")
+
+GENERATED: Dict[str, Dict[str, object]] = {}
+GENERATED_TTL_SECONDS = 20 * 60  # 20 minutes
+
+DEFAULT_Z_MATCH_TOL = 0.05
+DEFAULT_Z_FLOOR_TOL = 0.05
+
 
 @app.before_request
 def _log_req():
@@ -205,12 +198,6 @@ def _log_req():
     ref = request.headers.get("Referer", "")
     print(f"REQ ip={ip} path={path} ua={ua} ref={ref}", flush=True)
 
-GENERATED: Dict[str, Dict[str, object]] = {}
-GENERATED_TTL_SECONDS = 20 * 60  # 20 minutes
-
-# Anchor and Z matching tolerances
-DEFAULT_Z_MATCH_TOL = 0.05  # mm: "at/after RH within a bite"
-DEFAULT_Z_FLOOR_TOL = 0.05  # mm: never allow Z below RH - tol
 
 @dataclass
 class AnchorResult:
@@ -226,10 +213,6 @@ def _strip_comment(line: str) -> str:
 
 
 def _extract_float_param(line: str, letter: str) -> Optional[float]:
-    """
-    Best-effort parse of X/Y/Z/E/F in a G-code line (ignores comments).
-    Matches tokens like 'Z9.2', 'Z=9.2', 'Z 9.2' (tolerant).
-    """
     if not line:
         return None
     code = line.split(";", 1)[0]
@@ -248,11 +231,6 @@ def _is_motion(line: str) -> bool:
 
 
 def is_real_printing_move(line: str) -> bool:
-    """
-    Anchor heuristic (universal):
-      Motion (G0/G1/G2/G3) that includes E and at least one of X/Y.
-    Works for linears + arcs (Qidi, etc).
-    """
     if not _is_motion(line):
         return False
     e = _extract_float_param(line, "E")
@@ -264,11 +242,6 @@ def is_real_printing_move(line: str) -> bool:
 
 
 def _extract_z_comment(line: str) -> Optional[float]:
-    """
-    Parse slicer Z comment like:
-      ;Z:0.8
-      ; Z: 0.8
-    """
     if not line:
         return None
     m = re.search(r"(?i)^\s*;\s*Z\s*:\s*([-+]?\d*\.?\d+)\s*$", line.strip())
@@ -281,22 +254,16 @@ def _extract_z_comment(line: str) -> Optional[float]:
 
 
 def should_strip_line(line: str) -> bool:
-    """
-    Strip dangerous / ritual lines anywhere in resumed output.
-    Keep speeds/feeds from slicer; DO NOT strip F changes.
-    """
     s = (line or "").strip()
     if not s:
         return False
     up = s.upper()
 
-    # Homing / leveling / bed mesh / tilt / probing rituals
     if up.startswith("G28") or up.startswith("G29") or up.startswith("G34"):
         return True
     if "BED_MESH_CALIBRATE" in up or "Z_TILT_ADJUST" in up:
         return True
 
-    # Common macro rituals
     if up.startswith("START_PRINT") or up.startswith("PRINT_START"):
         return True
     if up.startswith("END_PRINT") or up.startswith("PRINT_END"):
@@ -304,7 +271,6 @@ def should_strip_line(line: str) -> bool:
     if up.startswith("CANCEL_PRINT"):
         return True
 
-    # Klipper gcode state ops are often foot-guns mid-resume
     if "SAVE_GCODE_STATE" in up or "RESTORE_GCODE_STATE" in up:
         return True
 
@@ -316,16 +282,11 @@ def infer_resume_z(print_height_mm: float, layer_height_mm: float) -> float:
         raise ValueError("Layer height must be > 0.")
     if print_height_mm < 0:
         raise ValueError("Print height must be >= 0.")
-    # Nearest multiple (user asked for closest)
     k = int(round(print_height_mm / layer_height_mm))
     return max(0.0, k * layer_height_mm)
 
 
 def _detect_extrusion_mode_and_last_e(lines: List[str]) -> Tuple[str, float]:
-    """
-    Detect M82/M83 and last absolute E prior to anchor.
-    If in absolute mode, we’ll convert the kept segment to relative E.
-    """
     mode = "absolute"
     last_e = 0.0
 
@@ -357,7 +318,6 @@ def _detect_extrusion_mode_and_last_e(lines: List[str]) -> Tuple[str, float]:
 
 
 def _replace_e_value(line: str, new_e: float) -> str:
-    """Replace first E token with E<new_e>, preserve comment."""
     if ";" in line:
         code_part, comment = line.split(";", 1)
         comment = ";" + comment
@@ -376,7 +336,6 @@ def _replace_e_value(line: str, new_e: float) -> str:
 
 
 def _convert_segment_to_relative_e(segment_lines: List[str], last_e_abs: float) -> List[str]:
-    """Convert absolute-E segment into relative-E deltas (supports G0/G1/G2/G3)."""
     out: List[str] = []
     cur = float(last_e_abs)
 
@@ -423,31 +382,15 @@ def _find_anchor_and_context(
     *,
     z_match_tol: float,
 ) -> AnchorResult:
-    """
-    Single pass:
-      - track current_z from Z tokens and ;Z: comments
-      - track last motion feedrate F from motion lines
-      - find first real printing move at/after resume_z (within tol)
-      - build context up to anchor for extrusion mode detection
-    """
     current_z: Optional[float] = None
     last_motion_f: Optional[float] = None
-
-    # For extrusion mode detection
     context: List[str] = []
 
     for i, raw in enumerate(gcode_lines):
-        if should_strip_line(raw):
-            # still include in context? safer to ignore (rituals often contain M82/M83/G92)
-            # but M82/M83/G92 are not stripped by should_strip_line, so ok.
-            pass
-
-        # Track Z from slicer comment ;Z:...
         zc = _extract_z_comment(raw)
         if zc is not None:
             current_z = float(zc)
 
-        # Track Z / F from motion commands
         if _is_motion(raw):
             z = _extract_float_param(raw, "Z")
             if z is not None:
@@ -457,11 +400,8 @@ def _find_anchor_and_context(
             if f is not None:
                 last_motion_f = float(f)
 
-        # Anchor condition:
-        # current_z must be known and >= (resume_z - tol)
         if current_z is not None and current_z >= (resume_z - z_match_tol):
             if not should_strip_line(raw) and is_real_printing_move(raw):
-                # Detect extrusion mode using everything before this line
                 mode, last_e_abs = _detect_extrusion_mode_and_last_e(context)
                 return AnchorResult(
                     anchor_index=i,
@@ -471,13 +411,9 @@ def _find_anchor_and_context(
                     last_motion_f=last_motion_f,
                 )
 
-        # Save to context for mode detection
         context.append(raw)
 
-    raise ValueError(
-        "Could not find a resume anchor: no real printing move found at/after the computed resume height. "
-        "Tip: increase Z match tolerance slightly, or verify print height + layer height."
-    )
+    raise ValueError("Could not find a resume anchor at/after computed resume height.")
 
 
 def build_resumed_gcode(
@@ -491,11 +427,7 @@ def build_resumed_gcode(
     inject_last_motion_feedrate: bool = True,
     include_user_check_messages: bool = True,
 ) -> Tuple[str, float]:
-    """
-    Returns (new_gcode_text, resume_z)
-    """
     gcode_lines = original_gcode_text.splitlines()
-
     resume_z = infer_resume_z(print_height_mm=print_height_mm, layer_height_mm=layer_height_mm)
 
     anchor = _find_anchor_and_context(
@@ -504,27 +436,13 @@ def build_resumed_gcode(
         z_match_tol=z_match_tol,
     )
 
-    # Keep from anchor onward, stripping dangerous lines and enforcing Z-floor guard
     kept: List[str] = []
-    tracked_z: Optional[float] = None
     z_floor = resume_z - float(z_floor_tol)
 
     for raw in gcode_lines[anchor.anchor_index:]:
         if should_strip_line(raw):
             continue
 
-        # Update tracked Z from ;Z: comment
-        zc = _extract_z_comment(raw)
-        if zc is not None:
-            tracked_z = float(zc)
-
-        # Update tracked Z from motion Z token
-        if _is_motion(raw):
-            z = _extract_float_param(raw, "Z")
-            if z is not None:
-                tracked_z = float(z)
-
-        # Hard Z-floor guard: if a move tries to go below z_floor, drop it
         if _is_motion(raw):
             z = _extract_float_param(raw, "Z")
             if z is not None and float(z) < z_floor:
@@ -535,11 +453,9 @@ def build_resumed_gcode(
     if not kept:
         raise ValueError("Internal error: nothing kept after anchor.")
 
-    # Convert absolute E to relative E if needed (we enforce M83 + G92 E0 in header)
     if anchor.detected_e_mode == "absolute":
         kept = _convert_segment_to_relative_e(kept, last_e_abs=anchor.last_e_abs)
 
-    fw = (firmware or "klipper").strip().lower()
     header: List[str] = []
     header.append("; --- RESUME FROM FAILURE (LAZARUS) ---")
     header.append(f"; Inputs: LH={layer_height_mm:.5f}mm, PH={print_height_mm:.3f}mm")
@@ -552,11 +468,7 @@ def build_resumed_gcode(
     header.append("M83 ; relative extrusion (Lazarus-safe)")
     header.append("G92 E0 ; reset extruder")
 
-    
-    # Feedrate inheritance: insert the last motion feedrate we saw before anchor
-    # (taken from the user's slicer, not invented).
     if inject_last_motion_feedrate and anchor.last_motion_f is not None:
-        # Use G1 F... universally (modal feedrate applies to G0/G1/G2/G3 in most firmwares)
         header.append(f"G1 F{anchor.last_motion_f:.3f} ; inherit slicer feedrate before anchor")
 
     header.append("; --- BEGIN RESUMED TOOLPATH ---")
@@ -580,7 +492,7 @@ def _cleanup_generated() -> None:
         GENERATED.pop(k, None)
 
 
-# ✅ BOTTOM BLOCK: REPLACE your "/" route decorator + DELETE your "/app" redirect route
+# ===================== ROUTES =====================
 
 @app.route("/", methods=["GET", "POST"])
 @app.route("/app", methods=["GET", "POST"])
@@ -604,6 +516,7 @@ def index():
                 "user_msgs": True,
             },
         )
+
     file = request.files.get("gcode_file")
     if not file or file.filename == "":
         flash("Please upload a G-code file.")
@@ -640,6 +553,7 @@ def index():
     if print_h < 0:
         flash("Print height must be >= 0.")
         return redirect(url_for("index"))
+
     if z_match_tol < 0:
         z_match_tol = DEFAULT_Z_MATCH_TOL
     if z_floor_tol < 0:
@@ -687,20 +601,17 @@ def download(token: str):
         flash("That download token expired. Generate again.")
         return redirect(url_for("index"))
 
-    data = rec["bytes"]
-    name = rec["name"]
-
     buf = io.BytesIO()
-    buf.write(data)
+    buf.write(rec["bytes"])
     buf.seek(0)
 
     return send_file(
         buf,
         mimetype="text/plain",
         as_attachment=True,
-        download_name=str(name),
+        download_name=str(rec["name"]),
     )
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.0.0", port=5000, debug=False)
+    app.run(host="0.0.0.0", port=5000, debug=False)
