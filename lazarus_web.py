@@ -19,27 +19,26 @@ HTML_PAGE = r"""
   <meta charset="utf-8">
   <title>Lazarus – Print Resurrection Lab</title>
 
+  <!-- Memberstack cookie config (MUST be before loader) -->
   <script>
-    window.memberstackConfig = { useCookies: true, setCookieOnRootDomain: true };
+    window.memberstackConfig = {
+      useCookies: true,
+      setCookieOnRootDomain: true
+    };
   </script>
 
+  <!-- Memberstack loader -->
   <script
     data-memberstack-id="app_cmjfk6pl8005z0tsh0b64027x"
     src="https://static.memberstack.com/scripts/v1/memberstack.js">
   </script>
 
   <style>
-    /* your styles */
-  </style>
-</head>
-"""
-
+    /* 🔒 SECURITY LOCK */
+    #app-content { visibility: hidden; }
+    .ms-member #app-content { visibility: visible; }
 
   
-  <style>
-    /* 2. Security Lock: Hide app content by default */
-      /* Show it only when Memberstack confirms a valid member */
-    
     /* Your Existing Styles */
     body { font-family: sans-serif; background:#111; color:#eee; padding:20px; }
     h1 { margin: 0 0 4px 0; }
@@ -66,6 +65,8 @@ HTML_PAGE = r"""
     code { background:#222; padding:2px 6px; border-radius:6px; border:1px solid #333; }
   </style>
 </head>
+"""
+
 <body>
   <!-- 3. Wrap everything in app-content -->
   <div id="app-content">
@@ -155,7 +156,7 @@ HTML_PAGE = r"""
         Enter that as <code>Measured print height</code>. Lazarus rounds to the nearest multiple of layer height.
       </div>
     </details>
-
+      </div>
   </div>
 </body>
 </html>
