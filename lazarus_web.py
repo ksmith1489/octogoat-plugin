@@ -18,18 +18,27 @@ HTML_PAGE = r"""
 <head>
   <meta charset="utf-8">
   <title>Lazarus – Print Resurrection Lab</title>
+
+  <!-- Memberstack config (must be BEFORE the loader) -->
   <script>
-  window.memberstackConfig = {
-    useCookies: true,
-    setCookieOnRootDomain: true
-  };
-</script>
-  <!-- 1. Memberstack Script (The Gate) -->
-  <script 
-  data-memberstack-app="app_cmjfk6pl8005z0tsh0b64027x" 
-  src="https://static.memberstack.com/scripts/v2/memberstack.js" 
-  type="text/javascript">
-</script>
+    window.memberstackConfig = {
+      useCookies: true,
+      setCookieOnRootDomain: true
+    };
+  </script>
+
+  <!-- Memberstack loader -->
+  <script
+    data-memberstack-id="app_cmjfk6pl8005z0tsh0b64027x"
+    src="https://static.memberstack.com/scripts/v1/memberstack.js"
+    type="text/javascript">
+  </script>
+
+  <style>
+    /* your styles */
+  </style>
+</head>
+
   
   <style>
     /* 2. Security Lock: Hide app content by default */
