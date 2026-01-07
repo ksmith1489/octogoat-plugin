@@ -18,7 +18,12 @@ HTML_PAGE = r"""
 <head>
   <meta charset="utf-8">
   <title>Lazarus – Print Resurrection Lab</title>
-  
+  <script>
+  window.memberstackConfig = {
+    useCookies: true,
+    setCookieOnRootDomain: true
+  };
+</script>
   <!-- 1. Memberstack Script (The Gate) -->
   <script 
   data-memberstack-app="app_cmjfk6pl8005z0tsh0b64027x" 
