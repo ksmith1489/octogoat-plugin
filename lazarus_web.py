@@ -16,17 +16,24 @@ HTML_PAGE = r"""
 <!doctype html>
 <html>
 <head>
-  <script>
-  window.memberstackConfig = { useCookies: true, setCookieOnRootDomain: true };
-  </script>
-  </script data-memberstack-id="app_cmjfk6pl8005z0tsh0b64027x"
-        src="https://static.memberstack.com/scripts/v1/memberstack.js"></script>
   <meta charset="utf-8">
   <title>Lazarus – Print Resurrection Lab</title>
+
+  <script>
+    window.memberstackConfig = { useCookies: true, setCookieOnRootDomain: true };
+  </script>
+
+  <script
+    data-memberstack-id="app_cmjfk6pl8005z0tsh0b64027x"
+    src="https://static.memberstack.com/scripts/v1/memberstack.js">
+  </script>
+
   <style>
     /* your styles */
   </style>
 </head>
+"""
+
 
   
   <style>
