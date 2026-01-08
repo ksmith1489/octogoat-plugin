@@ -204,9 +204,6 @@ HTML_PAGE = r"""<!doctype html>
 </html>
 """
 
-        </div>
-      </details>
-
 
 # ===================== FLASK + CORE LOGIC =====================
 
