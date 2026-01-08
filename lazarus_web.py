@@ -27,29 +27,21 @@ from flask import Flask, request, render_template_string, send_file, redirect, u
 
 
 # ===================== WEB UI =====================
-
 HTML_PAGE = r"""<!doctype html>
 <html>
 <head>
   <meta charset="utf-8">
   <title>Lazarus – Print Resurrection Lab</title>
 
-  <!-- Memberstack cookie config (MUST be before loader) -->
-  <script>
-    window.memberstackConfig = {
-      useCookies: true,
-      setCookieOnRootDomain: true
-    };
-  </script>
-
   <!-- Memberstack loader (v1) -->
   <script
-    data-memberstack-id="app_cmjfk6pl8005z0tsh0b64027x"
-    src="https://static.memberstack.com/scripts/v1/memberstack.js">
+    data-memberstack-app="app_cmjfk6pl8005z0tsh0b64027x"
+    src="https://static.memberstack.com/scripts/v1/memberstack.js"
+    type="text/javascript">
   </script>
 
   <style>
-    /* 🔒 SECURITY LOCK (CSS hide until Memberstack marks member) */
+    /* 🔒 SECURITY LOCK */
     #app-content { visibility: hidden; }
     .ms-member #app-content { visibility: visible; }
 
@@ -78,10 +70,46 @@ HTML_PAGE = r"""<!doctype html>
     details { margin-top:10px; }
     code { background:#222; padding:2px 6px; border-radius:6px; border:1px solid #333; }
   </style>
+
+  <script>
+    // If not logged in, open Memberstack login modal.
+    // (This is the missing piece that turns "blank page" into "login gate".)
+    window.addEventListener("load", function () {
+      function tryGate() {
+        if (!window.$memberstackDom || !window.$memberstackDom.getCurrentMember) return;
+
+        window.$memberstackDom.getCurrentMember()
+          .then(function (res) {
+            if (!res || !res.data) {
+              // Not logged in -> show login modal
+              window.$memberstackDom.openModal("LOGIN");
+            }
+            // If logged in, Memberstack will add .ms-member and the app-content becomes visible.
+          })
+          .catch(function () {
+            // If something odd happens, still show login.
+            if (window.$memberstackDom && window.$memberstackDom.openModal) {
+              window.$memberstackDom.openModal("LOGIN");
+            }
+          });
+      }
+
+      // Memberstack sometimes isn't ready instantly; retry a few times.
+      var tries = 0;
+      var t = setInterval(function () {
+        tries++;
+        tryGate();
+        if (window.$memberstackDom && window.$memberstackDom.getCurrentMember) {
+          clearInterval(t);
+        }
+        if (tries > 30) clearInterval(t); // ~6 seconds
+      }, 200);
+    });
+  </script>
 </head>
 
 <body>
-  <!-- EVERYTHING that should be hidden/shown must be inside this div -->
+  <!-- ✅ EVERYTHING you want hidden MUST be inside this div -->
   <div id="app-content">
     <h1>Lazarus</h1>
     <small>Two-input build: layer height + print height</small>
@@ -169,11 +197,15 @@ HTML_PAGE = r"""<!doctype html>
           Enter that as <code>Measured print height</code>. Lazarus rounds to the nearest multiple of layer height.
         </div>
       </details>
+
     </div>
   </div>
 </body>
 </html>
 """
+
+        </div>
+      </details>
 
 
 # ===================== FLASK + CORE LOGIC =====================
@@ -614,4 +646,5 @@ def download(token: str):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    port = int(os.environ.get("PORT", "5000"))
+    app.run(host="0.0.0.0", port=port, debug=False)
