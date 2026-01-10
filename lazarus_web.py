@@ -378,10 +378,9 @@ def _detect_extrusion_mode_and_last_e(lines: List[str]) -> Tuple[str, float]:
 
 def _replace_e_value(line: str, new_e: float) -> str:
     if ";" in line:
-        code_part, comment = line.split(";", 1)0
-        comment = ";" + commen       
-        0.0
-        0................................................................00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000               t
+        code_part, comment = line.split(";", 1)
+        comment = ";" + comment       
+        
     else:
         code_part, comment = line, ""
 
