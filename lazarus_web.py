@@ -32,8 +32,16 @@ HTML_PAGE = r"""<!doctype html>
 <head>
   <meta charset="utf-8">
   <title>Lazarus – Print Resurrection Lab</title>
+><!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Lazarus – Print Resurrection Lab</title>
 
-  <!-- Memberstack loader (v2) -->
+  <!-- Memberstack v2 (cross-subdomain cookies) -->
+  <script>
+    const memberstackConfig = { useCookies: true, setCookieOnRootDomain: true };
+  </script>
   <script
     data-memberstack-app="app_cmjfk6pl8005z0tsh0b64027x"
     src="https://static.memberstack.com/scripts/v2/memberstack.js"
@@ -41,11 +49,10 @@ HTML_PAGE = r"""<!doctype html>
   </script>
 
   <style>
-    /* 🔒 SECURITY LOCK */
+    /* 🔒 Gate: hide app until proven member */
     #app-content { visibility: hidden; }
     .ms-member #app-content { visibility: visible; }
 
-    /* Your Existing Styles */
     body { font-family: sans-serif; background:#111; color:#eee; padding:20px; }
     h1 { margin: 0 0 4px 0; }
     small { color:#aaa; }
@@ -72,75 +79,58 @@ HTML_PAGE = r"""<!doctype html>
   </style>
 
   <script>
-    // If not logged in, open Memberstack login modal.
-    // (This is the missing piece that turns "blank page" into "login gate".)
-    window.addEventListener("load", function () {
-      function tryGate() {
-        if (!window.$memberstackDom || !window.$memberstackDom.getCurrentMember) return;
-
-        window.$memberstackDom.getCurrentMember()
-          .then(function (res) {
-            if (!res || !res.data) {
-              // Not logged in -> show login modal
-              window.$memberstackDom.openModal("LOGIN");
-            }
-            // If logged in, Memberstack will add .ms-member and the app-content becomes visible.
-          })
-          .catch(function () {
-            // If something odd happens, still show login.
-            if (window.$memberstackDom && window.$memberstackDom.openModal) {
-              window.$memberstackDom.openModal("LOGIN");
-            }
-          });
-      }
-
-      // Memberstack sometimes isn't ready instantly; retry a few times.
-      var tries = 0;
-      var t = setInterval(function () {
+    // Single source of truth gate:
+    // - Not logged in -> redirect to WordPress funnel page
+    // - Logged in -> reveal app
+    window.addEventListener("load", () => {
+      let tries = 0;
+      const timer = setInterval(async () => {
         tries++;
-        tryGate();
-        if (window.$memberstackDom && window.$memberstackDom.getCurrentMember) {
-          clearInterval(t);
+
+        const ms = window.$memberstackDom;
+        if (!ms?.getCurrentMember) {
+          if (tries > 60) { // ~12 seconds
+            clearInterval(timer);
+            // If Memberstack never loads, still send them to funnel
+            window.location.href = "https://lazarus3dprint.com/free-iq-test";
+          }
+          return;
         }
-        if (tries > 30) clearInterval(t); // ~6 seconds
+
+        clearInterval(timer);
+
+        try {
+          const res = await ms.getCurrentMember();
+          const member = res?.data;
+
+          if (!member) {
+            window.location.href = "https://lazarus3dprint.com/free-iq-test";
+            return;
+          }
+
+          // Logged in
+          document.documentElement.classList.add("ms-member");
+          const app = document.getElementById("app-content");
+          if (app) app.style.visibility = "visible";
+
+        } catch (e) {
+          window.location.href = "https://lazarus3dprint.com/free-iq-test";
+        }
       }, 200);
     });
   </script>
 </head>
 
 <body>
- <div id="gate-panel" class="card">
-  <h2 style="margin:0 0 6px 0;">Lazarus is members-only</h2>
-  <div style="color:#aaa; margin-bottom:10px;">
-    Log in if you already have an account, or create one in 30 seconds.
-  </div>
-  <button class="btn" type="button" onclick="window.$memberstackDom.openModal('LOGIN')">Log in</button>
-  <button class="btn2" type="button" onclick="window.$memberstackDom.openModal('SIGNUP')">Create account</button>
-</div>
+  <div id="app-content">
+    <!-- YOUR Lazarus UI starts here -->
+
 
  <!-- ✅ EVERYTHING you want hidden MUST be inside this div -->
   <div id="app-content">
     <h1>Lazarus</h1>+
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+       
+     
     +++++++++++++++                                                               0
     <small>Two-input build: layer height + print height</small>
     <br><br>
