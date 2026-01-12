@@ -77,48 +77,57 @@ HTML_PAGE = r"""<!doctype html>
     details { margin-top:10px; }
     code { background:#222; padding:2px 6px; border-radius:6px; border:1px solid #333; }
   </style>
+<script>
+  window.addEventListener("load", () => {
+    const debug = new URLSearchParams(window.location.search).get("debug") === "1";
 
-  <script>
-    // Single source of truth gate:
-    // - Not logged in -> redirect to WordPress funnel page
-    // - Logged in -> reveal app
-    window.addEventListener("load", () => {
-      let tries = 0;
-      const timer = setInterval(async () => {
-        tries++;
+    let tries = 0;
+    const timer = setInterval(async () => {
+      tries++;
 
-        const ms = window.$memberstackDom;
-        if (!ms?.getCurrentMember) {
-          if (tries > 60) { // ~12 seconds
-            clearInterval(timer);
-            // If Memberstack never loads, still send them to funnel
-            window.location.href = "https://lazarus3dprint.com/free-iq-test";
+      const ms = window.$memberstackDom;
+      if (!ms?.getCurrentMember) {
+        if (tries > 60) { // ~12 seconds
+          clearInterval(timer);
+          if (debug) {
+            console.log("[MS] never became ready on app domain");
+            return;
           }
+          window.location.href = "https://lazarus3dprint.com/free-iq-test";
+        }
+        return;
+      }
+
+      try {
+        const res = await ms.getCurrentMember();
+        console.log("[MS] getCurrentMember on app:", res);
+
+        if (!res?.data) {
+          clearInterval(timer);
+          if (debug) return; // stay on page so you can inspect
+          window.location.href = "https://lazarus3dprint.com/free-iq-test";
           return;
         }
 
         clearInterval(timer);
+        document.documentElement.classList.add("ms-member");
+        console.log("[MS] logged in on app ✅");
 
-        try {
-          const res = await ms.getCurrentMember();
-          const member = res?.data;
-
-          if (!member) {
-            window.location.href = "https://lazarus3dprint.com/free-iq-test";
-            return;
-          }
-
-          // Logged in
-          document.documentElement.classList.add("ms-member");
-          const app = document.getElementById("app-content");
-          if (app) app.style.visibility = "visible";
-
-        } catch (e) {
-          window.location.href = "https://lazarus3dprint.com/free-iq-test";
+      } catch (e) {
+        clearInterval(timer);
+        if (debug) {
+          console.log("[MS] error on app:", e);
+          return;
         }
-      }, 200);
-    });
-  </script>
+        window.location.href = "https://lazarus3dprint.com/free-iq-test";
+      }
+    }, 200);
+  });
+</script>
+
+  
+      
+
 </head>
 
 <body>
