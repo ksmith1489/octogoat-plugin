@@ -113,12 +113,7 @@ HTML_PAGE = r"""<!doctype html>
         document.documentElement.classList.add("ms-member");
         console.log("[MS] logged in on app ✅");
 
-      } catch (e) {
-        clearInterval(timer);
-        if (debug) {
-          console.log("[MS] error on app:", e);
-          return;
-        }
+     
         window.location.href = "https://lazarus3dprint.com/free-iq-test";
       }
     }, 200);
