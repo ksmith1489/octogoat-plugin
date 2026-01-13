@@ -28,13 +28,12 @@ from flask import Flask, request, render_template_string, send_file, redirect, u
 
 # ===================== WEB UI =====================
 HTML_PAGE = r"""<!doctype html>
-<html lang="en">
+<html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Lazarus – Print Resurrection Lab</title>
 
-  <!-- Memberstack v2 (cross-subdomain cookies) -->
+  <!-- Memberstack v2 (IMPORTANT: must be window.memberstackConfig, not const) -->
   <script>
     window.memberstackConfig = { useCookies: true, setCookieOnRootDomain: true };
   </script>
@@ -45,7 +44,7 @@ HTML_PAGE = r"""<!doctype html>
   </script>
 
   <style>
-    /* 🔒 Gate: hide app until proven member */
+    /* 🔒 Gate: hide app until member is confirmed */
     #app-content { visibility: hidden; }
     .ms-member #app-content { visibility: visible; }
 
@@ -75,63 +74,64 @@ HTML_PAGE = r"""<!doctype html>
   </style>
 
   <script>
-    // Gate logic:
-    // - if not logged in => redirect to IQ test
-    // - if logged in => show app-content
-    // Use ?debug=1 to prevent redirect so you can inspect res in console.
     window.addEventListener("load", () => {
       const debug = new URLSearchParams(window.location.search).get("debug") === "1";
-      let tries = 0;
+      const loginRedirect = "https://lazarus3dprint.com/free-iq-test";
 
+      function log(...args){ if (debug) console.log(...args); }
+
+      let tries = 0;
       const timer = setInterval(async () => {
         tries++;
 
         const ms = window.$memberstackDom;
-
-        // wait for Memberstack to load
-        if (!ms || typeof ms.getCurrentMember !== "function") {
-          if (tries > 60) { // ~12s
+        if (!ms?.getCurrentMember) {
+          if (tries > 80) { // ~16s
             clearInterval(timer);
-            if (debug) {
-              console.log("[MS] never became ready on app domain");
-              return;
-            }
-            window.location.href = "https://lazarus3dprint.com/free-iq-test";
+            log("[MS] never became ready on app domain");
+            // In debug mode, don't bounce—let you inspect.
+            if (!debug) window.location.href = loginRedirect;
           }
           return;
         }
 
         try {
           const res = await ms.getCurrentMember();
-          console.log("[MS] getCurrentMember on app:", res);
+          log("[MS] getCurrentMember on app:", res);
 
-          // Not logged in
-          if (!res || !res.data) {
+          if (res?.data) {
             clearInterval(timer);
-            if (debug) return; // stay put for inspection
-            window.location.href = "https://lazarus3dprint.com/free-iq-test";
+            document.documentElement.classList.add("ms-member");
+            log("[MS] member confirmed ✅");
             return;
           }
 
-          // Logged in: show app
+          // Not logged in (or session missing on this subdomain)
           clearInterval(timer);
-          document.documentElement.classList.add("ms-member");
-          console.log("[MS] logged in on app ✅");
-          // IMPORTANT: do NOT redirect when logged in.
+          log("[MS] not logged in on app domain -> open login modal");
+          if (ms?.openModal) ms.openModal("LOGIN");
+          if (!debug) {
+            // Optional: if you prefer a hard redirect instead of modal, uncomment:
+            // window.location.href = loginRedirect;
+          }
 
         } catch (e) {
           clearInterval(timer);
-          console.log("[MS] error on app:", e);
-          if (debug) return;
-          window.location.href = "https://lazarus3dprint.com/free-iq-test";
+          log("[MS] error on app:", e);
+          if (window.$memberstackDom?.openModal) window.$memberstackDom.openModal("LOGIN");
+          if (!debug) {
+            // Optional fallback redirect:
+            // window.location.href = loginRedirect;
+          }
         }
       }, 200);
     });
   </script>
+
 </head>
 
 <body>
-  <!-- ✅ EVERYTHING you want hidden MUST be inside this div -->
+  <!-- EVERYTHING you want hidden MUST be inside this div -->
   <div id="app-content">
     <h1>Lazarus</h1>
     <small>Two-input build: layer height + print height</small>
@@ -667,3 +667,5 @@ def download(token: str):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5000"))
     app.run(host="0.0.0.0", port=port, debug=False)
+
+
