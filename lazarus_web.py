@@ -28,19 +28,15 @@ from flask import Flask, request, render_template_string, send_file, redirect, u
 
 # ===================== WEB UI =====================
 HTML_PAGE = r"""<!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Lazarus – Print Resurrection Lab</title>
-><!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Lazarus – Print Resurrection Lab</title>
 
   <!-- Memberstack v2 (cross-subdomain cookies) -->
   <script>
-    const memberstackConfig = { useCookies: true, setCookieOnRootDomain: true };
+    window.memberstackConfig = { useCookies: true, setCookieOnRootDomain: true };
   </script>
   <script
     data-memberstack-app="app_cmjfk6pl8005z0tsh0b64027x"
@@ -77,65 +73,67 @@ HTML_PAGE = r"""<!doctype html>
     details { margin-top:10px; }
     code { background:#222; padding:2px 6px; border-radius:6px; border:1px solid #333; }
   </style>
-<script>
-  window.addEventListener("load", () => {
-    const debug = new URLSearchParams(window.location.search).get("debug") === "1";
 
-    let tries = 0;
-    const timer = setInterval(async () => {
-      tries++;
+  <script>
+    // Gate logic:
+    // - if not logged in => redirect to IQ test
+    // - if logged in => show app-content
+    // Use ?debug=1 to prevent redirect so you can inspect res in console.
+    window.addEventListener("load", () => {
+      const debug = new URLSearchParams(window.location.search).get("debug") === "1";
+      let tries = 0;
 
-      const ms = window.$memberstackDom;
-      if (!ms?.getCurrentMember) {
-        if (tries > 60) { // ~12 seconds
-          clearInterval(timer);
-          if (debug) {
-            console.log("[MS] never became ready on app domain");
-            return;
+      const timer = setInterval(async () => {
+        tries++;
+
+        const ms = window.$memberstackDom;
+
+        // wait for Memberstack to load
+        if (!ms || typeof ms.getCurrentMember !== "function") {
+          if (tries > 60) { // ~12s
+            clearInterval(timer);
+            if (debug) {
+              console.log("[MS] never became ready on app domain");
+              return;
+            }
+            window.location.href = "https://lazarus3dprint.com/free-iq-test";
           }
-          window.location.href = "https://lazarus3dprint.com/free-iq-test";
-        }
-        return;
-      }
-
-      try {
-        const res = await ms.getCurrentMember();
-        console.log("[MS] getCurrentMember on app:", res);
-
-        if (!res?.data) {
-          clearInterval(timer);
-          if (debug) return; // stay on page so you can inspect
-          window.location.href = "https://lazarus3dprint.com/free-iq-test";
           return;
         }
 
-        clearInterval(timer);
-        document.documentElement.classList.add("ms-member");
-        console.log("[MS] logged in on app ✅");
+        try {
+          const res = await ms.getCurrentMember();
+          console.log("[MS] getCurrentMember on app:", res);
 
-     
-        window.location.href = "https://lazarus3dprint.com/free-iq-test";
-      }
-    }, 200);
-  });
-</script>
+          // Not logged in
+          if (!res || !res.data) {
+            clearInterval(timer);
+            if (debug) return; // stay put for inspection
+            window.location.href = "https://lazarus3dprint.com/free-iq-test";
+            return;
+          }
 
-  
-      
+          // Logged in: show app
+          clearInterval(timer);
+          document.documentElement.classList.add("ms-member");
+          console.log("[MS] logged in on app ✅");
+          // IMPORTANT: do NOT redirect when logged in.
 
+        } catch (e) {
+          clearInterval(timer);
+          console.log("[MS] error on app:", e);
+          if (debug) return;
+          window.location.href = "https://lazarus3dprint.com/free-iq-test";
+        }
+      }, 200);
+    });
+  </script>
 </head>
 
 <body>
+  <!-- ✅ EVERYTHING you want hidden MUST be inside this div -->
   <div id="app-content">
-    <!-- YOUR Lazarus UI starts here -->
-
-
- <!-- ✅ EVERYTHING you want hidden MUST be inside this div -->
-  <div id="app-content">
-    <h1>Lazarus</h1>+
-       
-     
-    +++++++++++++++                                                               0
+    <h1>Lazarus</h1>
     <small>Two-input build: layer height + print height</small>
     <br><br>
 
@@ -373,8 +371,7 @@ def _detect_extrusion_mode_and_last_e(lines: List[str]) -> Tuple[str, float]:
 def _replace_e_value(line: str, new_e: float) -> str:
     if ";" in line:
         code_part, comment = line.split(";", 1)
-        comment = ";" + comment       
-        
+        comment = ";" + comment
     else:
         code_part, comment = line, ""
 
