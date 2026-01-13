@@ -105,15 +105,18 @@ HTML_PAGE = r"""<!doctype html>
             log("[MS] member confirmed ✅");
             return;
           }
+             // Not logged in (or session missing on this subdomain)
+             log("[MS] not logged in on app domain -> open login modal");
 
-          // Not logged in (or session missing on this subdomain)
-          clearInterval(timer);
-          log("[MS] not logged in on app domain -> open login modal");
-          if (ms?.openModal) ms.openModal("LOGIN");
-          if (!debug) {
-            // Optional: if you prefer a hard redirect instead of modal, uncomment:
-            // window.location.href = loginRedirect;
+             if (!window.__msLoginModalOpened && ms?.openModal) {
+             window.__msLoginModalOpened = true;
+             ms.openModal("LOGIN");
           }
+
+             // IMPORTANT: do NOT clearInterval(timer) here.
+             // Keep polling until res.data becomes truthy after login.
+             return;
+
 
         } catch (e) {
           clearInterval(timer);
