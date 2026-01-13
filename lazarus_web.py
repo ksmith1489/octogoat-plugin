@@ -94,38 +94,51 @@ HTML_PAGE = r"""<!doctype html>
           }
           return;
         }
+    try {
+      const res = await ms.getCurrentMember();
+      log("[MS] getCurrentMember on app:", res);
 
-        try {
-          const res = await ms.getCurrentMember();
-          log("[MS] getCurrentMember on app:", res);
+      const member = res?.data;
+      const plans = member?.plans || [];
 
-          if (res?.data) {
-            clearInterval(timer);
-            document.documentElement.classList.add("ms-member");
-            log("[MS] member confirmed ✅");
-            return;
-          }
-             // Not logged in (or session missing on this subdomain)
-             log("[MS] not logged in on app domain -> open login modal");
+      // Require at least one ACTIVE plan
+      const hasActivePlan = plans.some(p => String(p?.status || "").toUpperCase() === "ACTIVE");
 
-             if (!window.__msLoginModalOpened && ms?.openModal) {
-             window.__msLoginModalOpened = true;
-             ms.openModal("LOGIN");
-          }
+     if (member && hasActivePlan) {
+       clearInterval(timer);
+       document.documentElement.classList.add("ms-member");
+       log("[MS] member + ACTIVE plan confirmed ✅");
+       return;
+    }
 
-             // IMPORTANT: do NOT clearInterval(timer) here.
-             // Keep polling until res.data becomes truthy after login.
-             return;
+      // Logged in but NOT paid (or not logged in)
+      log("[MS] no active plan (or not logged in) -> open login modal");
 
+      if (!window.__msLoginModalOpened && ms?.openModal) {
+        window.__msLoginModalOpened = true;
+        ms.openModal("LOGIN");
+    }
 
-        } catch (e) {
-          clearInterval(timer);
-          log("[MS] error on app:", e);
-          if (window.$memberstackDom?.openModal) window.$memberstackDom.openModal("LOGIN");
-          if (!debug) {
-            // Optional fallback redirect:
-            // window.location.href = loginRedirect;
-          }
+    // IMPORTANT: do NOT clearInterval(timer) here.
+    // Keep polling until they have an ACTIVE plan.
+    return;
+
+   } catch (e) {
+     clearInterval(timer);
+     log("[MS] error on app:", e);
+
+     if (!window.__msLoginModalOpened && ms?.openModal) {
+       window.__msLoginModalOpened = true;
+       ms.openModal("LOGIN");
+     }
+
+     if (!debug) {
+       // Optional fallback redirect:
+       // window.location.href = loginRedirect;
+     }
+   }
+
+       
         }
       }, 200);
     });
