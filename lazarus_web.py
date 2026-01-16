@@ -72,77 +72,73 @@ HTML_PAGE = r"""<!doctype html>
     details { margin-top:10px; }
     code { background:#222; padding:2px 6px; border-radius:6px; border:1px solid #333; }
   </style>
+     <script>
+  window.addEventListener("load", () => {
+    const debug = new URLSearchParams(location.search).get("debug") === "1";
+    const loginRedirect = "https://lazarus3dprint.com/free-iq-test";
 
-  <script>
-    window.addEventListener("load", () => {
-      const debug = new URLSearchParams(window.location.search).get("debug") === "1";
-      const loginRedirect = "https://lazarus3dprint.com/free-iq-test";
+    function log(...args) { if (debug) console.log(...args); }
 
-      function log(...args){ if (debug) console.log(...args); }
+    let tries = 0;
+    const timer = setInterval(async () => {
+      tries += 1;
 
-      let tries = 0;
-      const timer = setInterval(async () => {
-        tries++;
+      const ms = window.$memberstackDom;
+      if (!ms || !ms.getCurrentMember) {
+        if (tries > 80) { // ~16s
+          clearInterval(timer);
+          log("[MS] never became ready on app domain");
+          if (!debug) window.location.href = loginRedirect;
+        }
+        return;
+      }
 
-        const ms = window.$memberstackDom;
-        if (!ms?.getCurrentMember) {
-          if (tries > 80) { // ~16s
-            clearInterval(timer);
-            log("[MS] never became ready on app domain");
-            // In debug mode, don't bounce—let you inspect.
+      try {
+        const res = await ms.getCurrentMember();
+        log("[MS] getCurrentMember on app:", res);
+
+        const member = res && res.data ? res.data : null;
+        if (member) {
+          // ✅ Logged in (account exists)
+          // Optional "paid" check (recommended): require a permission you only grant to paid plans.
+          const perms = (member.permissions && Array.isArray(member.permissions)) ? member.permissions : [];
+          const hasPaidPermission = perms.includes("paid");
+
+          if (!hasPaidPermission) {
+            // Logged in but not paid
+            log("[MS] logged in but NOT paid -> redirect");
             if (!debug) window.location.href = loginRedirect;
+            return;
           }
+
+          // ✅ Paid member -> show app
+          clearInterval(timer);
+          document.documentElement.classList.add("ms-member");
+          log("[MS] paid member confirmed -> app unlocked");
           return;
         }
-    try {
-      const res = await ms.getCurrentMember();
-      log("[MS] getCurrentMember on app:", res);
 
-      const member = res?.data;
-      const plans = member?.plans || [];
-
-      // Require at least one ACTIVE plan
-      const hasActivePlan = plans.some(p => String(p?.status || "").toUpperCase() === "ACTIVE");
-
-     if (member && hasActivePlan) {
-       clearInterval(timer);
-       document.documentElement.classList.add("ms-member");
-       log("[MS] member + ACTIVE plan confirmed ✅");
-       return;
-    }
-
-      // Logged in but NOT paid (or not logged in)
-      log("[MS] no active plan (or not logged in) -> open login modal");
-
-      if (!window.__msLoginModalOpened && ms?.openModal) {
-        window.__msLoginModalOpened = true;
-        ms.openModal("LOGIN");
-    }
-
-    // IMPORTANT: do NOT clearInterval(timer) here.
-    // Keep polling until they have an ACTIVE plan.
-    return;
-
-   } catch (e) {
-     clearInterval(timer);
-     log("[MS] error on app:", e);
-
-     if (!window.__msLoginModalOpened && ms?.openModal) {
-       window.__msLoginModalOpened = true;
-       ms.openModal("LOGIN");
-     }
-
-     if (!debug) {
-       // Optional fallback redirect:
-       // window.location.href = loginRedirect;
-     }
-   }
-
-       
+        // Not logged in yet -> open login modal ONCE, but keep polling
+        log("[MS] not logged in -> open login modal");
+        if (!window.__msLoginModalOpened && ms.openModal) {
+          window.__msLoginModalOpened = true;
+          ms.openModal("LOGIN");
         }
-      }, 200);
-    });
-  </script>
+        return;
+
+      } catch (e) {
+        clearInterval(timer);
+        log("[MS] error:", e);
+        if (window.$memberstackDom && window.$memberstackDom.openModal) {
+          window.$memberstackDom.openModal("LOGIN");
+        }
+        if (!debug) window.location.href = loginRedirect;
+      }
+    }, 200);
+  });
+</script>
+
+ 
 
 </head>
 
