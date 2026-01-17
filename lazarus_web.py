@@ -76,15 +76,40 @@ HTML_PAGE = r"""<!doctype html>
   window.addEventListener("load", () => {
     const debug = new URLSearchParams(location.search).get("debug") === "1";
     const loginRedirect = "https://lazarus3dprint.com/free-iq-test";
+    const REQUIRE_PERMISSION = "paid"; // <-- your Memberstack permission name
 
     function log(...args) { if (debug) console.log(...args); }
+
+    // normalize statuses to uppercase strings
+    function normStatus(s) {
+      return (s == null) ? "" : String(s).trim().toUpperCase();
+    }
+
+    function hasAccess(member) {
+      if (!member) return false;
+
+      // 1) BEST: permission gate (you already have permissions: ["paid"])
+      const perms = Array.isArray(member.permissions) ? member.permissions : [];
+      if (REQUIRE_PERMISSION && perms.includes(REQUIRE_PERMISSION)) return true;
+
+      // 2) Fallback: planConnections statuses (your data lives here)
+      const pcs = Array.isArray(member.planConnections) ? member.planConnections : [];
+      const ok = new Set(["ACTIVE", "TRIALING", "TRIAL", "PAID"]);
+      if (pcs.some(pc => ok.has(normStatus(pc?.status)))) return true;
+
+      // 3) Optional extra fallback if Memberstack ever starts returning plans again
+      const plans = Array.isArray(member.plans) ? member.plans : [];
+      if (plans.some(p => ok.has(normStatus(p?.status)))) return true;
+
+      return false;
+    }
 
     let tries = 0;
     const timer = setInterval(async () => {
       tries += 1;
 
       const ms = window.$memberstackDom;
-      if (!ms || !ms.getCurrentMember) {
+      if (!ms?.getCurrentMember) {
         if (tries > 80) { // ~16s
           clearInterval(timer);
           log("[MS] never became ready on app domain");
@@ -95,26 +120,19 @@ HTML_PAGE = r"""<!doctype html>
 
       try {
         const res = await ms.getCurrentMember();
-        log("[MS] getCurrentMember on app:", res);
-
         const member = res?.data || null;
+        log("[MS] getCurrentMember:", res);
 
         if (member) {
-          // ✅ Logged in (account exists)
-          // ✅ Access check: accept ACTIVE or TRIALING plans
-          const plans = Array.isArray(member.plans) ? member.plans : [];
-          const hasAccessPlan = plans.some(p => ["ACTIVE", "TRIALING"].includes(p?.status));
-
-          if (!hasAccessPlan) {
-            log("[MS] logged in but NO ACTIVE/TRIALING plan -> redirect");
-            if (!debug) window.location.href = loginRedirect;
+          if (hasAccess(member)) {
+            clearInterval(timer);
+            document.documentElement.classList.add("ms-member");
+            log("[MS] access confirmed ✅ (unlocked)");
             return;
           }
 
-          // ✅ Allowed -> show app
-          clearInterval(timer);
-          document.documentElement.classList.add("ms-member");
-          log("[MS] ACTIVE/TRIALING plan confirmed -> app unlocked");
+          log("[MS] logged in but NO access -> redirect");
+          if (!debug) window.location.href = loginRedirect;
           return;
         }
 
@@ -135,6 +153,7 @@ HTML_PAGE = r"""<!doctype html>
     }, 200);
   });
 </script>
+
 
    
 
