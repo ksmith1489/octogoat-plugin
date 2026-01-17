@@ -72,7 +72,7 @@ HTML_PAGE = r"""<!doctype html>
     details { margin-top:10px; }
     code { background:#222; padding:2px 6px; border-radius:6px; border:1px solid #333; }
   </style>
-     <script>
+<script>
   window.addEventListener("load", () => {
     const debug = new URLSearchParams(location.search).get("debug") === "1";
     const loginRedirect = "https://lazarus3dprint.com/free-iq-test";
@@ -97,24 +97,24 @@ HTML_PAGE = r"""<!doctype html>
         const res = await ms.getCurrentMember();
         log("[MS] getCurrentMember on app:", res);
 
-        const member = res && res.data ? res.data : null;
+        const member = res?.data || null;
+
         if (member) {
           // ✅ Logged in (account exists)
-          // Optional "paid" check (recommended): require a permission you only grant to paid plans.
-          const perms = (member.permissions && Array.isArray(member.permissions)) ? member.permissions : [];
-          const hasPaidPermission = perms.includes("paid");
+          // ✅ Access check: accept ACTIVE or TRIALING plans
+          const plans = Array.isArray(member.plans) ? member.plans : [];
+          const hasAccessPlan = plans.some(p => ["ACTIVE", "TRIALING"].includes(p?.status));
 
-          if (!hasPaidPermission) {
-            // Logged in but not paid
-            log("[MS] logged in but NOT paid -> redirect");
+          if (!hasAccessPlan) {
+            log("[MS] logged in but NO ACTIVE/TRIALING plan -> redirect");
             if (!debug) window.location.href = loginRedirect;
             return;
           }
 
-          // ✅ Paid member -> show app
+          // ✅ Allowed -> show app
           clearInterval(timer);
           document.documentElement.classList.add("ms-member");
-          log("[MS] paid member confirmed -> app unlocked");
+          log("[MS] ACTIVE/TRIALING plan confirmed -> app unlocked");
           return;
         }
 
@@ -129,14 +129,14 @@ HTML_PAGE = r"""<!doctype html>
       } catch (e) {
         clearInterval(timer);
         log("[MS] error:", e);
-        if (window.$memberstackDom && window.$memberstackDom.openModal) {
-          window.$memberstackDom.openModal("LOGIN");
-        }
+        if (window.$memberstackDom?.openModal) window.$memberstackDom.openModal("LOGIN");
         if (!debug) window.location.href = loginRedirect;
       }
     }, 200);
   });
 </script>
+
+   
 
  
 
