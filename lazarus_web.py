@@ -203,10 +203,10 @@ HTML_PAGE = r"""<!doctype html>
         </div>
 
         <div class="row">
-          <label>Z match tolerance (mm) (default {{ form.z_match_tol or '0.05' }}):
+          <label>Z match tolerance (mm)(advanced used only) (default {{ form.z_match_tol or '0.05' }}):
             <input type="number" step="0.01" name="z_match_tol" value="{{ form.z_match_tol or '0.05' }}">
           </label>
-          <label>Z floor guard (mm) (default {{ form.z_floor_tol or '0.05' }}):
+          <label>Z floor guard (mm) (advanced use only)(default {{ form.z_floor_tol or '0.05' }}):
             <input type="number" step="0.01" name="z_floor_tol" value="{{ form.z_floor_tol or '0.05' }}">
           </label>
         </div>
@@ -216,10 +216,7 @@ HTML_PAGE = r"""<!doctype html>
             <input type="checkbox" name="inject_f" value="1" {% if form.inject_f %}checked{% endif %}>
             Inherit slicer feedrate near anchor (recommended)
           </label>
-          <label>
-            <input type="checkbox" name="user_msgs" value="1" {% if form.user_msgs %}checked{% endif %}>
-            Add short console checklist (recommended)
-          </label>
+         
         </div>
 
         <div class="danger" style="margin-top:8px;">
@@ -244,10 +241,11 @@ HTML_PAGE = r"""<!doctype html>
 
       <hr>
       <details>
-        <summary style="cursor:pointer; color:#aaa; font-weight:bold;">Measuring tip (fast + accurate)</summary>
+        <summary style="cursor:pointer; color:#aaa; font-weight:bold;">Reorientation Instructions brand/firmware specific</summary>
         <div style="margin-top:10px; color:#ddd; line-height:1.45;">
-          Home Z normally (bed as truth), then jog Z up to the top of the print and read the Z value.
-          Enter that as <code>Measured print height</code>. Lazarus rounds to the nearest multiple of layer height.
+          Copy and paste this into your prefered AI / LLM prompt box with your model and firmware, “My printer is a [PRINTER MODEL] running [FIRMWARE].It normally parks at X[ ] Y[ ] Z[ ] after a print stops. I want to re-establish the printer’s position without homing, so I can resume a failed print.Please give only the commands I should use, and briefly explain what each one does.” end prompt,
+          (where the printhead is parked upon stopping or canceling a print which is what you do when you see one failing. This is where you want to know what the coordinates are for this spot while the printer is online and internal geometry nas not been lost,  Then when you stop it or whatever you know that if the toolhead is there the cooridinates are x_ y_ z_ (you will find this on your fluidd, mainsale, octoapp, UI),  You maybe able to home x and y safely unlock motion control and drop the nozzle to the bed safely and get true z=0 and it would be the same as if you had homed.  Usually the parking spot is good enough when you know the coordinates ahead of time and no exactly where that spot is exactly.  If you have access to your printer.cfg you can ask an Ai / LLM to write you custom macros so that coordinates are restored from the stop parking spot with one click or pick a corner of your print bed to keep clear and use that as a landing pad and have AI write you a custom Lazarus Homing Macro.  Use common sense and practice before you do a live one and keep your finger near the power off button till you know it is right then your resume process is like 2 minutes.
+           
         </div>
       </details>
 
