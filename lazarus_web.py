@@ -17,14 +17,22 @@ Open:
 
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
+from pathlib import Path
 import io
 import os
 import re
 import secrets
 import time
 
-from flask import Flask, request, render_template_string, send_file, redirect, url_for, flash
-
+from flask import (
+    Flask,
+    request,
+    render_template_string,
+    send_file,
+    redirect,
+    url_for,
+    flash,
+)
 
 # ===================== WEB UI =====================
 HTML_PAGE = r"""<!doctype html>
@@ -261,6 +269,16 @@ HTML_PAGE = r"""<!doctype html>
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-only-secret")
 
+# Hard cap uploads so one big G-code can't OOM the server.
+# You can change via Render env var: MAX_UPLOAD_MB
+MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "15"))
+app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_MB * 1024 * 1024  # enforced by Werkzeug
+
+# Store generated files on disk (NOT in RAM)
+GEN_DIR = Path(os.environ.get("LAZARUS_GEN_DIR", "/tmp/lazarus_generated"))
+GEN_DIR.mkdir(parents=True, exist_ok=True)
+
+# token -> {"path": str, "name": str, "ts": float}
 GENERATED: Dict[str, Dict[str, object]] = {}
 GENERATED_TTL_SECONDS = 20 * 60  # 20 minutes
 
@@ -268,16 +286,26 @@ DEFAULT_Z_MATCH_TOL = 0.05
 DEFAULT_Z_FLOOR_TOL = 0.05
 
 
+@app.errorhandler(413)
+def _too_large(_e):
+    flash(f"File too large. Max upload is {MAX_UPLOAD_MB} MB.")
+    return redirect(url_for("index"))
+
+
 @app.before_request
 def _log_req():
-    ip = (request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
-          or request.headers.get("X-Real-IP")
-          or request.remote_addr)
+    ip = (
+        request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+        or request.headers.get("X-Real-IP")
+        or request.remote_addr
+    )
     ua = request.headers.get("User-Agent", "")
     path = request.path
     ref = request.headers.get("Referer", "")
     print(f"REQ ip={ip} path={path} ua={ua} ref={ref}", flush=True)
 
+
+# ---- Core parsing helpers (kept) ----
 
 @dataclass
 class AnchorResult:
@@ -366,37 +394,6 @@ def infer_resume_z(print_height_mm: float, layer_height_mm: float) -> float:
     return max(0.0, k * layer_height_mm)
 
 
-def _detect_extrusion_mode_and_last_e(lines: List[str]) -> Tuple[str, float]:
-    mode = "absolute"
-    last_e = 0.0
-
-    for raw in lines:
-        code = _strip_comment(raw)
-        if not code:
-            continue
-        up = code.upper()
-
-        if up.startswith("M82"):
-            mode = "absolute"
-            continue
-        if up.startswith("M83"):
-            mode = "relative"
-            continue
-
-        if up.startswith("G92"):
-            e = _extract_float_param(code, "E")
-            if e is not None:
-                last_e = float(e)
-            continue
-
-        if _is_motion(code) and mode == "absolute":
-            e = _extract_float_param(code, "E")
-            if e is not None:
-                last_e = float(e)
-
-    return mode, last_e
-
-
 def _replace_e_value(line: str, new_e: float) -> str:
     if ";" in line:
         code_part, comment = line.split(";", 1)
@@ -407,7 +404,13 @@ def _replace_e_value(line: str, new_e: float) -> str:
     def repl(m: re.Match) -> str:
         return f"{m.group(1)}{new_e:.5f}"
 
-    new_code = re.sub(r"(?i)(\bE\s*)(?:=\s*)?([-+]?\d*\.?\d+)", repl, code_part, count=1).rstrip()
+    new_code = re.sub(
+        r"(?i)(\bE\s*)(?:=\s*)?([-+]?\d*\.?\d+)",
+        repl,
+        code_part,
+        count=1,
+    ).rstrip()
+
     if comment:
         if not new_code.endswith(" "):
             new_code += " "
@@ -415,62 +418,58 @@ def _replace_e_value(line: str, new_e: float) -> str:
     return new_code
 
 
-def _convert_segment_to_relative_e(segment_lines: List[str], last_e_abs: float) -> List[str]:
-    out: List[str] = []
-    cur = float(last_e_abs)
+# ===================== LEAN MEMORY GENERATION =====================
 
-    for ln in segment_lines:
-        if not ln.strip():
-            out.append(ln)
-            continue
-
-        code = _strip_comment(ln)
-        if not code:
-            out.append(ln)
-            continue
-
-        up = code.upper()
-
-        if up.startswith("G92"):
-            e = _extract_float_param(code, "E")
-            if e is not None:
-                cur = float(e)
-                out.append("G92 E0")
-            else:
-                out.append(ln)
-            continue
-
-        if _is_motion(code):
-            e_abs = _extract_float_param(code, "E")
-            if e_abs is None:
-                out.append(ln)
-                continue
-            e_abs = float(e_abs)
-            e_rel = e_abs - cur
-            cur = e_abs
-            out.append(_replace_e_value(ln, e_rel))
-            continue
-
-        out.append(ln)
-
-    return out
-
-
-def _find_anchor_and_context(
-    gcode_lines: List[str],
-    resume_z: float,
+def build_resumed_gcode_to_file(
+    original_gcode_text: str,
     *,
-    z_match_tol: float,
-) -> AnchorResult:
-    current_z: Optional[float] = None
-    last_motion_f: Optional[float] = None
-    context: List[str] = []
+    firmware: str,
+    layer_height_mm: float,
+    print_height_mm: float,
+    out_path: str,
+    z_match_tol: float = DEFAULT_Z_MATCH_TOL,
+    z_floor_tol: float = DEFAULT_Z_FLOOR_TOL,
+    inject_last_motion_feedrate: bool = True,
+    include_user_check_messages: bool = True,  # kept for API compatibility (unused here)
+    preview_lines: int = 220,
+) -> Tuple[float, str]:
+    """
+    Writes resumed G-code directly to out_path (disk), returns (resume_z, preview_text).
+    Designed to avoid large in-RAM copies.
+    """
+    resume_z = infer_resume_z(print_height_mm=print_height_mm, layer_height_mm=layer_height_mm)
+    z_floor = resume_z - float(z_floor_tol)
 
-    for i, raw in enumerate(gcode_lines):
+    # PASS 1: Find anchor index + track extrusion mode, last absolute E, and last motion feedrate
+    detected_mode = "absolute"
+    last_e_abs = 0.0
+    last_motion_f: Optional[float] = None
+    current_z: Optional[float] = None
+    anchor_index: Optional[int] = None
+
+    for i, raw in enumerate(io.StringIO(original_gcode_text)):
         zc = _extract_z_comment(raw)
         if zc is not None:
             current_z = float(zc)
 
+        code = _strip_comment(raw)
+        up = code.upper() if code else ""
+
+        # Track extrusion mode & absolute E state
+        if up.startswith("M82"):
+            detected_mode = "absolute"
+        elif up.startswith("M83"):
+            detected_mode = "relative"
+        elif up.startswith("G92"):
+            e = _extract_float_param(code, "E")
+            if e is not None:
+                last_e_abs = float(e)
+        elif _is_motion(code) and detected_mode == "absolute":
+            e = _extract_float_param(code, "E")
+            if e is not None:
+                last_e_abs = float(e)
+
+        # Track Z/F from motion lines
         if _is_motion(raw):
             z = _extract_float_param(raw, "Z")
             if z is not None:
@@ -480,96 +479,111 @@ def _find_anchor_and_context(
             if f is not None:
                 last_motion_f = float(f)
 
+        # Anchor condition
         if current_z is not None and current_z >= (resume_z - z_match_tol):
             if not should_strip_line(raw) and is_real_printing_move(raw):
-                mode, last_e_abs = _detect_extrusion_mode_and_last_e(context)
-                return AnchorResult(
-                    anchor_index=i,
-                    resume_z=resume_z,
-                    detected_e_mode=mode,
-                    last_e_abs=last_e_abs,
-                    last_motion_f=last_motion_f,
-                )
+                anchor_index = i
+                break
 
-        context.append(raw)
+    if anchor_index is None:
+        raise ValueError("Could not find a resume anchor at/after computed resume height.")
 
-    raise ValueError("Could not find a resume anchor at/after computed resume height.")
-
-
-def build_resumed_gcode(
-    original_gcode_text: str,
-    *,
-    firmware: str,
-    layer_height_mm: float,
-    print_height_mm: float,
-    z_match_tol: float = DEFAULT_Z_MATCH_TOL,
-    z_floor_tol: float = DEFAULT_Z_FLOOR_TOL,
-    inject_last_motion_feedrate: bool = True,
-    include_user_check_messages: bool = True,
-) -> Tuple[str, float]:
-    gcode_lines = original_gcode_text.splitlines()
-    resume_z = infer_resume_z(print_height_mm=print_height_mm, layer_height_mm=layer_height_mm)
-
-    anchor = _find_anchor_and_context(
-        gcode_lines,
-        resume_z=resume_z,
-        z_match_tol=z_match_tol,
-    )
-
-    kept: List[str] = []
-    z_floor = resume_z - float(z_floor_tol)
-
-    for raw in gcode_lines[anchor.anchor_index:]:
-        if should_strip_line(raw):
-            continue
-
-        if _is_motion(raw):
-            z = _extract_float_param(raw, "Z")
-            if z is not None and float(z) < z_floor:
-                continue
-
-        kept.append(raw)
-
-    if not kept:
-        raise ValueError("Internal error: nothing kept after anchor.")
-
-    if anchor.detected_e_mode == "absolute":
-        kept = _convert_segment_to_relative_e(kept, last_e_abs=anchor.last_e_abs)
-
+    # Build header (small, safe)
     header: List[str] = []
     header.append("; --- RESUME FROM FAILURE (LAZARUS) ---")
     header.append(f"; Inputs: LH={layer_height_mm:.5f}mm, PH={print_height_mm:.3f}mm")
     header.append(f"; Computed resume height (RH): {resume_z:.3f} mm (nearest multiple of LH)")
-    header.append(f"; Anchor index: {anchor.anchor_index}")
+    header.append(f"; Anchor index: {anchor_index}")
     header.append(f"; Z-match tol: {z_match_tol:.3f} mm | Z-floor guard: Z >= {z_floor:.3f} mm")
-    header.append(f"; Detected extrusion mode in source: {anchor.detected_e_mode.upper()}")
+    header.append(f"; Detected extrusion mode in source: {detected_mode.upper()}")
     header.append("G90 ; absolute positioning")
     header.append("G21 ; millimeters")
     header.append("M83 ; relative extrusion (Lazarus-safe)")
     header.append("G92 E0 ; reset extruder")
 
-    if inject_last_motion_feedrate and anchor.last_motion_f is not None:
-        header.append(f"G1 F{anchor.last_motion_f:.3f} ; inherit slicer feedrate before anchor")
+    if inject_last_motion_feedrate and last_motion_f is not None:
+        header.append(f"G1 F{last_motion_f:.3f} ; inherit slicer feedrate before anchor")
 
     header.append("; --- BEGIN RESUMED TOOLPATH ---")
 
-    out_lines: List[str] = []
-    out_lines.extend(header)
-    out_lines.extend(kept)
-    out_lines.append("; --- END RESUMED FILE ---")
+    # Preview buffer (tiny, bounded)
+    preview_buf: List[str] = []
+    preview_count = 0
 
-    return "\n".join(out_lines) + "\n", resume_z
+    def _preview_add(line_with_nl: str) -> None:
+        nonlocal preview_count
+        if preview_count < preview_lines:
+            preview_buf.append(line_with_nl.rstrip("\n"))
+            preview_count += 1
+
+    # PASS 2: stream write from anchor onward, filtering and converting E if needed
+    cur_abs_e = float(last_e_abs)
+
+    with open(out_path, "w", encoding="utf-8", newline="\n") as f:
+        for ln in header:
+            f.write(ln + "\n")
+            _preview_add(ln + "\n")
+
+        for i, raw in enumerate(io.StringIO(original_gcode_text)):
+            if i < anchor_index:
+                continue
+
+            if should_strip_line(raw):
+                continue
+
+            if _is_motion(raw):
+                z = _extract_float_param(raw, "Z")
+                if z is not None and float(z) < z_floor:
+                    continue
+
+            out_line = raw.rstrip("\n")
+
+            # Convert absolute E -> relative E on the fly
+            if detected_mode == "absolute":
+                code = _strip_comment(out_line)
+                up = code.upper() if code else ""
+
+                if up.startswith("G92"):
+                    e = _extract_float_param(code, "E")
+                    if e is not None:
+                        cur_abs_e = float(e)
+                        out_line = "G92 E0"
+                elif _is_motion(code):
+                    e_abs = _extract_float_param(code, "E")
+                    if e_abs is not None:
+                        e_abs = float(e_abs)
+                        e_rel = e_abs - cur_abs_e
+                        cur_abs_e = e_abs
+                        out_line = _replace_e_value(out_line, e_rel)
+
+            f.write(out_line + "\n")
+            _preview_add(out_line + "\n")
+
+        f.write("; --- END RESUMED FILE ---\n")
+        _preview_add("; --- END RESUMED FILE ---\n")
+
+    return resume_z, "\n".join(preview_buf)
 
 
 def _cleanup_generated() -> None:
     now = time.time()
     dead: List[str] = []
-    for k, v in GENERATED.items():
+
+    for k, v in list(GENERATED.items()):
         ts = float(v.get("ts", 0.0))
         if now - ts > GENERATED_TTL_SECONDS:
             dead.append(k)
+
     for k in dead:
-        GENERATED.pop(k, None)
+        rec = GENERATED.pop(k, None)
+        if not rec:
+            continue
+        p = rec.get("path")
+        if p:
+            try:
+                Path(str(p)).unlink(missing_ok=True)
+            except Exception:
+                pass
 
 
 # ===================== ROUTES =====================
@@ -602,10 +616,16 @@ def index():
         flash("Please upload a G-code file.")
         return redirect(url_for("index"))
 
+    # Read upload (MAX_CONTENT_LENGTH already enforced). Still decode once.
     try:
-        original_text = file.read().decode("utf-8", errors="ignore")
+        raw_bytes = file.read()
+        original_text = raw_bytes.decode("utf-8", errors="ignore")
     except Exception as e:
         flash(f"Could not read file: {e}")
+        return redirect(url_for("index"))
+
+    if not original_text.strip():
+        flash("Uploaded file is empty or unreadable.")
         return redirect(url_for("index"))
 
     form_state = {
@@ -639,8 +659,12 @@ def index():
     if z_floor_tol < 0:
         z_floor_tol = DEFAULT_Z_FLOOR_TOL
 
+    token = secrets.token_urlsafe(16)
+    base_name = os.path.splitext(file.filename or "resume")[0]
+    out_path = str(GEN_DIR / f"{token}.gcode")
+
     try:
-        new_gcode, resume_z = build_resumed_gcode(
+        resume_z, preview = build_resumed_gcode_to_file(
             original_gcode_text=original_text,
             firmware=form_state["firmware"],
             layer_height_mm=layer_h,
@@ -649,25 +673,26 @@ def index():
             z_floor_tol=z_floor_tol,
             inject_last_motion_feedrate=bool(form_state["inject_f"]),
             include_user_check_messages=bool(form_state["user_msgs"]),
+            out_path=out_path,
+            preview_lines=220,
         )
     except Exception as e:
+        # Clean temp output if it exists
+        try:
+            Path(out_path).unlink(missing_ok=True)
+        except Exception:
+            pass
         flash(f"Error generating recovery G-code: {e}")
         return redirect(url_for("index"))
 
-    token = secrets.token_urlsafe(16)
-    base_name = os.path.splitext(file.filename or "resume")[0]
     out_name = f"{base_name}_LAZARUS_RH_{resume_z:.3f}.gcode"
-    GENERATED[token] = {"bytes": new_gcode.encode("utf-8"), "name": out_name, "ts": time.time()}
-
-    preview_lines = 220
-    lines = new_gcode.splitlines()
-    preview = "\n".join(lines[:preview_lines])
+    GENERATED[token] = {"path": out_path, "name": out_name, "ts": time.time()}
 
     return render_template_string(
         HTML_PAGE,
         preview=preview,
         token=token,
-        preview_lines=preview_lines,
+        preview_lines=220,
         resume_z=f"{resume_z:.3f}",
         form=form_state,
     )
@@ -681,12 +706,13 @@ def download(token: str):
         flash("That download token expired. Generate again.")
         return redirect(url_for("index"))
 
-    buf = io.BytesIO()
-    buf.write(rec["bytes"])
-    buf.seek(0)
+    p = rec.get("path")
+    if not p or not os.path.exists(str(p)):
+        flash("That download token expired. Generate again.")
+        return redirect(url_for("index"))
 
     return send_file(
-        buf,
+        str(p),
         mimetype="text/plain",
         as_attachment=True,
         download_name=str(rec["name"]),
@@ -696,5 +722,3 @@ def download(token: str):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5000"))
     app.run(host="0.0.0.0", port=port, debug=False)
-
-
