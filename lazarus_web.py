@@ -15,6 +15,7 @@ Open:
   http://127.0.0.1:5000
 """
 
+from werkzeug.middleware.proxy_fix import ProxyFix
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
@@ -32,8 +33,10 @@ from flask import (
     redirect,
     url_for,
     flash,
+    Response
 )
-
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 # ===================== WEB UI =====================
 HTML_PAGE = r"""<!doctype html>
 <html>
@@ -267,11 +270,31 @@ HTML_PAGE = r"""<!doctype html>
 # ===================== FLASK + CORE LOGIC =====================
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per hour"]
+)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-only-secret")
+@app.route("/robots.txt")
+def robots():
+    return Response(
+        """User-agent: *
+Disallow: /app/
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: air.ai
+Disallow: /
+""",
+        mimetype="text/plain"
+    )
 
 # Hard cap uploads so one big G-code can't OOM the server.
 # You can change via Render env var: MAX_UPLOAD_MB
-MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "15"))
+MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "50"))
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_MB * 1024 * 1024  # enforced by Werkzeug
 
 # Store generated files on disk (NOT in RAM)
