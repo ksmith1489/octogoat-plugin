@@ -614,11 +614,7 @@ def index():
         "ts": time.time(),
     }
     
-    if __name__ == "__main__":
-        port = int(os.environ.get("PORT", "5000"))
-        app.run(host="0.0.0.0", port=port, debug=False)
-
-
+    
     return render_template_string(
         HTML_PAGE,
         preview=preview,
@@ -634,3 +630,8 @@ def cancel_request():
     data = request.get_json(silent=True) or {}
     print("CANCEL REQUEST:", data)
     return jsonify({"status": "ok"})
+    
+    if __name__ == "__main__":
+        port = int(os.environ.get("PORT", "5000"))
+        app.run(host="0.0.0.0", port=port, debug=False)
+
