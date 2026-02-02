@@ -531,16 +531,10 @@ def _cleanup_generated() -> None:
 
 
 # ===================== ROUTES =====================
+# ===================== ROUTES =====================
 
 @app.route("/", methods=["GET", "POST"])
 @app.route("/app", methods=["GET", "POST"])
-@app.route("/cancel-request", methods=["POST"])
-@app.route("/cancel-request", methods=["POST"])
-def cancel_request():
-    data = request.get_json(silent=True) or {}
-    print("CANCEL REQUEST:", data)
-    return jsonify({"status": "ok"})
-
 def index():
     _cleanup_generated()
 
@@ -562,15 +556,15 @@ def index():
             },
         )
 
+    # -------- POST (form submit) --------
+
     file = request.files.get("gcode_file")
     if not file or file.filename == "":
         flash("Please upload a G-code file.")
         return redirect(url_for("index"))
 
-    # Read upload (MAX_CONTENT_LENGTH already enforced). Still decode once.
     try:
-        raw_bytes = file.read()
-        original_text = raw_bytes.decode("utf-8", errors="ignore")
+        original_text = file.read().decode("utf-8", errors="ignore")
     except Exception as e:
         flash(f"Could not read file: {e}")
         return redirect(url_for("index"))
@@ -590,54 +584,40 @@ def index():
     }
 
     try:
-        layer_h = float(str(form_state["layer_height"]).strip())
-        print_h = float(str(form_state["print_height"]).strip())
-        z_match_tol = float(str(form_state["z_match_tol"]).strip() or "0.05")
-        z_floor_tol = float(str(form_state["z_floor_tol"]).strip() or "0.05")
+        layer_h = float(form_state["layer_height"])
+        print_h = float(form_state["print_height"])
+        z_match_tol = float(form_state["z_match_tol"])
+        z_floor_tol = float(form_state["z_floor_tol"])
     except Exception:
-        flash("Invalid numeric input. Check layer height / print height / tolerances.")
+        flash("Invalid numeric input.")
         return redirect(url_for("index"))
-
-    if layer_h <= 0:
-        flash("Layer height must be > 0.")
-        return redirect(url_for("index"))
-    if print_h < 0:
-        flash("Print height must be >= 0.")
-        return redirect(url_for("index"))
-
-    if z_match_tol < 0:
-        z_match_tol = DEFAULT_Z_MATCH_TOL
-    if z_floor_tol < 0:
-        z_floor_tol = DEFAULT_Z_FLOOR_TOL
 
     token = secrets.token_urlsafe(16)
-    base_name = os.path.splitext(file.filename or "resume")[0]
     out_path = str(GEN_DIR / f"{token}.gcode")
 
-    try:
-        resume_z, preview = build_resumed_gcode_to_file(
-            original_gcode_text=original_text,
-            firmware=form_state["firmware"],
-            layer_height_mm=layer_h,
-            print_height_mm=print_h,
-            z_match_tol=z_match_tol,
-            z_floor_tol=z_floor_tol,
-            inject_last_motion_feedrate=bool(form_state["inject_f"]),
-            include_user_check_messages=bool(form_state["user_msgs"]),
-            out_path=out_path,
-            preview_lines=220,
-        )
-    except Exception as e:
-        # Clean temp output if it exists
-        try:
-            Path(out_path).unlink(missing_ok=True)
-        except Exception:
-            pass
-        flash(f"Error generating recovery G-code: {e}")
-        return redirect(url_for("index"))
+    resume_z, preview = build_resumed_gcode_to_file(
+        original_gcode_text=original_text,
+        firmware=form_state["firmware"],
+        layer_height_mm=layer_h,
+        print_height_mm=print_h,
+        z_match_tol=z_match_tol,
+        z_floor_tol=z_floor_tol,
+        inject_last_motion_feedrate=form_state["inject_f"],
+        include_user_check_messages=form_state["user_msgs"],
+        out_path=out_path,
+        preview_lines=220,
+    )
 
-    out_name = f"{base_name}_LAZARUS_RH_{resume_z:.3f}.gcode"
-    GENERATED[token] = {"path": out_path, "name": out_name, "ts": time.time()}
+    GENERATED[token] = {
+        "path": out_path,
+        "name": f"LAZARUS_RH_{resume_z:.3f}.gcode",
+        "ts": time.time(),
+    }
+    
+    if __name__ == "__main__":
+    port = int(os.environ.get("PORT", "5000"))
+    app.run(host="0.0.0.0", port=port, debug=False)
+
 
     return render_template_string(
         HTML_PAGE,
@@ -649,27 +629,8 @@ def index():
     )
 
 
-@app.route("/download/<token>")
-def download(token: str):
-    _cleanup_generated()
-    rec = GENERATED.get(token)
-    if not rec:
-        flash("That download token expired. Generate again.")
-        return redirect(url_for("index"))
-
-    p = rec.get("path")
-    if not p or not os.path.exists(str(p)):
-        flash("That download token expired. Generate again.")
-        return redirect(url_for("index"))
-
-    return send_file(
-        str(p),
-        mimetype="text/plain",
-        as_attachment=True,
-        download_name=str(rec["name"]),
-    )
-
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "5000"))
-    app.run(host="0.0.0.0", port=port, debug=False)
+@app.route("/cancel-request", methods=["POST"])
+def cancel_request():
+    data = request.get_json(silent=True) or {}
+    print("CANCEL REQUEST:", data)
+    return jsonify({"status": "ok"})
