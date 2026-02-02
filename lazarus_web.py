@@ -27,7 +27,7 @@ import time
 
 from flask import (
     Flask,
-    request,
+    request, jsonify
     render_template_string,
     send_file,
     redirect,
@@ -534,10 +534,11 @@ def _cleanup_generated() -> None:
 @app.route("/", methods=["GET", "POST"])
 @app.route("/app", methods=["GET", "POST"])
 @app.route("/cancel-request", methods=["POST"])
+@app.route("/cancel-request", methods=["POST"])
 def cancel_request():
-    data = request.json
+    data = request.get_json(silent=True) or {}
     print("CANCEL REQUEST:", data)
-    return {"status": "ok"}
+    return jsonify({"status": "ok"})
 
 def index():
     _cleanup_generated()
