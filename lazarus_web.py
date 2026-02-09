@@ -183,7 +183,7 @@ HTML_PAGE = r"""<!doctype html>
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
 
-# ===================== API KEY AUTH (PHASE 1) =====================
+# ===================== API KEY AUTH (PHASE 1) ===================
 
 LAZARUS_API_KEY = os.environ.get("LAZARUS_API_KEY")
 
