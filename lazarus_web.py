@@ -183,6 +183,18 @@ HTML_PAGE = r"""<!doctype html>
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
 
+# ===================== API KEY AUTH (PHASE 1) =====================
+
+LAZARUS_API_KEY = os.environ.get("LAZARUS_API_KEY")
+
+def require_api_key():
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return False
+    key = auth.split(" ", 1)[1].strip()
+    return key == LAZARUS_API_KEY
+
+
 limiter = Limiter(
     get_remote_address,
     app=app,
