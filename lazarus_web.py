@@ -238,16 +238,7 @@ def _too_large(_e):
 @app.route("/", methods=["GET", "POST"])
 @app.route("/app", methods=["GET", "POST"])
 
-# ===================== API KEY AUTH (PHASE 1) =====================
 
-LAZARUS_API_KEY = os.environ.get("LAZARUS_API_KEY")
-
-def require_api_key():
-    auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "):
-        return False
-    key = auth.split(" ", 1)[1].strip()
-    return key == LAZARUS_API_KEY
 
 def index():
     _cleanup_generated()
