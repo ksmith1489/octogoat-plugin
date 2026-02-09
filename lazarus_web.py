@@ -188,6 +188,9 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
 LAZARUS_API_KEY = os.environ.get("LAZARUS_API_KEY")
 
 def require_api_key():
+    if not request.path.startswith("/api/"):
+        return True
+    
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         return False
