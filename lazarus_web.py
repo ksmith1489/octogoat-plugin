@@ -270,6 +270,9 @@ HTML_PAGE = r"""<!doctype html>
 # ===================== FLASK + CORE LOGIC =====================
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
+
+LAZARUS_API_KEY = os.environ.get("LAZARUS_API_KEY")
 
 def require_api_key():
     # Only protect API routes
@@ -288,7 +291,7 @@ def require_api_key():
     return key == LAZARUS_API_KEY
 
 
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
+
 limiter = Limiter(
     get_remote_address,
     app=app,
