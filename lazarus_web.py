@@ -774,6 +774,79 @@ def api_ping():
         "engine": "alive"
     })
 
+@app.route("/api/jobs", methods=["POST"])
+def api_jobs():
+    if not require_api_key():
+        return Response(
+            '{"error":"invalid or missing API key"}',
+            status=401,
+            mimetype="application/json",
+        )
+
+    file = request.files.get("gcode_file")
+    if not file:
+        return Response(
+            '{"error":"missing gcode_file"}',
+            status=400,
+            mimetype="application/json",
+        )
+
+    try:
+        layer_height = float(request.form.get("layer_height"))
+        print_height = float(request.form.get("print_height"))
+        firmware = (request.form.get("firmware") or "klipper").lower()
+    except Exception:
+        return Response(
+            '{"error":"invalid numeric inputs"}',
+            status=400,
+            mimetype="application/json",
+        )
+
+    original_text = file.read().decode("utf-8", errors="ignore")
+    token = secrets.token_urlsafe(16)
+    out_path = str(GEN_DIR / f"{token}.gcode")
+
+    resume_z, preview = build_resumed_gcode_to_file(
+        original_gcode_text=original_text,
+        firmware=firmware,
+        layer_height_mm=layer_height,
+        print_height_mm=print_height,
+        z_match_tol=DEFAULT_Z_MATCH_TOL,
+        z_floor_tol=DEFAULT_Z_FLOOR_TOL,
+        inject_last_motion_feedrate=True,
+        include_user_check_messages=True,
+        out_path=out_path,
+        preview_lines=120,
+    )
+
+    GENERATED[token] = {
+        "path": out_path,
+        "name": f"LAZARUS_RH_{resume_z:.3f}.gcode",
+        "ts": time.time(),
+    }
+
+    return Response(
+        json.dumps({
+            "ok": True,
+            "resume_z": round(resume_z, 3),
+            "download_url": f"/download/{token}",
+            "preview": preview.splitlines()[:40],
+        }),
+        mimetype="application/json",
+    )
+
+@app.route("/download/<token>")
+def api_download(token):
+    entry = GENERATED.get(token)
+    if not entry:
+        return Response("Not found", status=404)
+
+    return send_file(
+        entry["path"],
+        as_attachment=True,
+        download_name=entry["name"],
+    )
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5000"))
