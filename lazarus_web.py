@@ -796,29 +796,33 @@ def api_jobs():
         layer_height = float(request.form.get("layer_height"))
         print_height = float(request.form.get("print_height"))
         firmware = (request.form.get("firmware") or "klipper").lower()
-    except Exception:
-        return Response(
-            '{"error":"invalid numeric inputs"}',
-            status=400,
-            mimetype="application/json",
+
+        original_text = file.read().decode("utf-8", errors="ignore")
+        token = secrets.token_urlsafe(16)
+        out_path = str(GEN_DIR / f"{token}.gcode")
+
+        resume_z, preview = build_resumed_gcode_to_file(
+            original_gcode_text=original_text,
+            firmware=firmware,
+            layer_height_mm=layer_height,
+            print_height_mm=print_height,
+            z_match_tol=DEFAULT_Z_MATCH_TOL,
+            z_floor_tol=DEFAULT_Z_FLOOR_TOL,
+            inject_last_motion_feedrate=True,
+            include_user_check_messages=True,
+            out_path=out_path,
+            preview_lines=120,
         )
 
-    original_text = file.read().decode("utf-8", errors="ignore")
-    token = secrets.token_urlsafe(16)
-    out_path = str(GEN_DIR / f"{token}.gcode")
-
-    resume_z, preview = build_resumed_gcode_to_file(
-        original_gcode_text=original_text,
-        firmware=firmware,
-        layer_height_mm=layer_height,
-        print_height_mm=print_height,
-        z_match_tol=DEFAULT_Z_MATCH_TOL,
-        z_floor_tol=DEFAULT_Z_FLOOR_TOL,
-        inject_last_motion_feedrate=True,
-        include_user_check_messages=True,
-        out_path=out_path,
-        preview_lines=120,
-    )
+    except ValueError as e:
+        return Response(
+            json.dumps({
+                "ok": False,
+                "error": str(e)
+            }),
+            status=422,
+            mimetype="application/json",
+        )
 
     GENERATED[token] = {
         "path": out_path,
@@ -835,6 +839,7 @@ def api_jobs():
         }),
         mimetype="application/json",
     )
+
 
 @app.route("/download/<token>")
 def api_download(token):
