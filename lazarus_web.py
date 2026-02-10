@@ -272,14 +272,21 @@ HTML_PAGE = r"""<!doctype html>
 app = Flask(__name__)
 
 def require_api_key():
+    # Only protect API routes
     if not request.path.startswith("/api/"):
         return True
+
+    # If no key is configured, fail closed but cleanly
+    if not LAZARUS_API_KEY:
+        return False
 
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         return False
+
     key = auth.split(" ", 1)[1].strip()
     return key == LAZARUS_API_KEY
+
 
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
 limiter = Limiter(
