@@ -523,6 +523,40 @@ def infer_resume_z(print_height_mm: float, layer_height_mm: float) -> float:
     return max(0.0, k * layer_height_mm)
 
 
+
+def compute_datum_point(gcode_lines, target_height_mm, layer_height_mm, quadrant):
+    target_z = infer_resume_z(
+        print_height_mm=float(target_height_mm),
+        layer_height_mm=float(layer_height_mm),
+    )
+
+    corners = find_layer_extremes_at_z(gcode_lines, target_z, layer_height_mm)
+    if corners is None:
+        return None
+
+    if quadrant not in {"front_left", "front_right", "back_left", "back_right"}:
+        raise ValueError("quadrant must be one of: front_left, front_right, back_left, back_right")
+
+    selected_corner = None
+    if isinstance(corners, dict):
+        selected_corner = corners.get(quadrant)
+    elif isinstance(corners, (list, tuple)) and len(corners) == 4:
+        index_map = {
+            "front_left": 0,
+            "front_right": 1,
+            "back_left": 2,
+            "back_right": 3,
+        }
+        selected_corner = corners[index_map[quadrant]]
+
+    if selected_corner is None:
+        return None
+
+    datum_x, datum_y = selected_corner
+    datum_z = target_z
+    return (datum_x, datum_y, datum_z)
+
+
 def _replace_e_value(line: str, new_e: float) -> str:
     if ";" in line:
         code_part, comment = line.split(";", 1)
