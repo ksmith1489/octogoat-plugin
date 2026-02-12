@@ -593,6 +593,132 @@ def generate_klipper_resume_gcode(
     ]
 
 
+def compute_datum_point(
+    *,
+    gcode_lines,
+    print_height_mm: float,
+    layer_height_mm: float,
+    quadrant: str,
+) -> Optional[Tuple[float, float, float]]:
+    resume_z = infer_resume_z(print_height_mm=print_height_mm, layer_height_mm=layer_height_mm)
+    q = (quadrant or "front_left").strip().lower().replace("-", "_")
+    if q not in {"front_left", "front_right", "back_left", "back_right"}:
+        raise ValueError(f"Unknown quadrant: {quadrant}")
+
+    points: List[Tuple[float, float, float]] = []
+    current_z: Optional[float] = None
+
+    for raw in gcode_lines:
+        zc = _extract_z_comment(raw)
+        if zc is not None:
+            current_z = float(zc)
+
+        if not _is_motion(raw):
+            continue
+
+        z = _extract_float_param(raw, "Z")
+        if z is not None:
+            current_z = float(z)
+
+        if current_z is None or current_z < resume_z:
+            continue
+
+        x = _extract_float_param(raw, "X")
+        y = _extract_float_param(raw, "Y")
+        if x is None or y is None:
+            continue
+
+        points.append((float(x), float(y), float(current_z)))
+
+    if not points:
+        return None
+
+    if q == "front_left":
+        return min(points, key=lambda p: (p[1], p[0], p[2]))
+    if q == "front_right":
+        return min(points, key=lambda p: (p[1], -p[0], p[2]))
+    if q == "back_left":
+        return min(points, key=lambda p: (-p[1], p[0], p[2]))
+    return min(points, key=lambda p: (-p[1], -p[0], p[2]))
+
+
+def generate_marlin_resume_gcode(
+    *,
+    datum_x: float,
+    datum_y: float,
+    datum_z: float,
+    safety_z: float,
+    travel_feed: int = 6000,
+) -> List[str]:
+    return [
+        "G90",
+        f"G0 Z{safety_z:.3f} F{travel_feed}",
+        f"G0 X{datum_x:.3f} Y{datum_y:.3f} F{travel_feed}",
+        f"G0 Z{datum_z:.3f} F{travel_feed}",
+    ]
+
+
+def generate_klipper_resume_gcode(
+    *,
+    datum_x: float,
+    datum_y: float,
+    datum_z: float,
+    safety_z: float,
+    travel_feed: int = 6000,
+) -> List[str]:
+    if safety_z <= datum_z:
+        raise ValueError("safety_z must be above datum_z.")
+
+    return [
+        f"SET_KINEMATIC_POSITION Z={safety_z:.3f}",
+        "G90",
+        f"G0 X{datum_x:.3f} Y{datum_y:.3f} F{travel_feed}",
+        f"G0 Z{datum_z:.3f} F{travel_feed}",
+    ]
+
+
+
+def build_resume_gcode(
+    *,
+    firmware: str,
+    gcode_lines,
+    print_height_mm: float,
+    layer_height_mm: float,
+    quadrant: str,
+    safety_z: float,
+    travel_feed: int = 6000,
+) -> List[str]:
+    datum = compute_datum_point(
+        gcode_lines=gcode_lines,
+        print_height_mm=print_height_mm,
+        layer_height_mm=layer_height_mm,
+        quadrant=quadrant,
+    )
+    if datum is None:
+        raise ValueError("Unable to compute datum point")
+
+    datum_x, datum_y, datum_z = datum
+    fw = (firmware or "").strip().lower()
+    if fw == "marlin":
+        return generate_marlin_resume_gcode(
+            datum_x=datum_x,
+            datum_y=datum_y,
+            datum_z=datum_z,
+            safety_z=safety_z,
+            travel_feed=travel_feed,
+        )
+    if fw == "klipper":
+        return generate_klipper_resume_gcode(
+            datum_x=datum_x,
+            datum_y=datum_y,
+            datum_z=datum_z,
+            safety_z=safety_z,
+            travel_feed=travel_feed,
+        )
+    raise ValueError(f"Unknown firmware: {firmware}")
+
+
+
 def _replace_e_value(line: str, new_e: float) -> str:
     if ";" in line:
         code_part, comment = line.split(";", 1)
