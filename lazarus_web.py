@@ -430,6 +430,89 @@ def should_strip_line(line: str) -> bool:
 
     return False
 
+def find_layer_extremes_at_z(gcode_lines, target_z, layer_height):
+    """
+    Scan G-code lines and locate the layer closest to target_z.
+    Return a dict of XY extrema at that layer.
+
+    Returns:
+        {
+            'front_left': (x, y),
+            'front_right': (x, y),
+            'back_left': (x, y),
+            'back_right': (x, y)
+        }
+
+    Rules:
+    - Ignore comment lines
+    - Track absolute X, Y, Z positions
+    - Assume absolute positioning (G90)
+    - Determine a Z window of ±(layer_height / 2) around target_z
+    - Collect all XY positions where Z falls inside that window
+    - Compute min_x, max_x, min_y, max_y
+    - If no positions are found, return None
+    - Handle missing X or Y by carrying forward last known values
+    """
+    # Usage: pass a list/iterable of raw G-code lines plus target Z + layer height.
+    try:
+        z_half_window = abs(float(layer_height)) / 2.0
+        z_min = float(target_z) - z_half_window
+        z_max = float(target_z) + z_half_window
+    except Exception:
+        return None
+
+    current_x: Optional[float] = None
+    current_y: Optional[float] = None
+    current_z: Optional[float] = None
+    xy_points: List[Tuple[float, float]] = []
+
+    for raw_line in gcode_lines or []:
+        try:
+            line = str(raw_line).strip()
+        except Exception:
+            continue
+
+        if not line or line.startswith(";"):
+            continue
+
+        code = line.split(";", 1)[0].strip()
+        if not code:
+            continue
+
+        next_x = _extract_float_param(code, "X")
+        next_y = _extract_float_param(code, "Y")
+        next_z = _extract_float_param(code, "Z")
+
+        if next_x is not None:
+            current_x = next_x
+        if next_y is not None:
+            current_y = next_y
+        if next_z is not None:
+            current_z = next_z
+
+        if current_z is None or current_x is None or current_y is None:
+            continue
+
+        if z_min <= current_z <= z_max:
+            xy_points.append((current_x, current_y))
+
+    if not xy_points:
+        return None
+
+    min_x = min(pt[0] for pt in xy_points)
+    max_x = max(pt[0] for pt in xy_points)
+    min_y = min(pt[1] for pt in xy_points)
+    max_y = max(pt[1] for pt in xy_points)
+
+    return {
+        "front_left": (min_x, min_y),
+        "front_right": (max_x, min_y),
+        "back_left": (min_x, max_y),
+        "back_right": (max_x, max_y),
+    }
+
+
+
 
 def infer_resume_z(print_height_mm: float, layer_height_mm: float) -> float:
     if layer_height_mm <= 0:
