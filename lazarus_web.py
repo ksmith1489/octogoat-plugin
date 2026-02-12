@@ -557,6 +557,42 @@ def compute_datum_point(gcode_lines, target_height_mm, layer_height_mm, quadrant
     return (datum_x, datum_y, datum_z)
 
 
+def generate_marlin_resume_gcode(
+    datum_x: float,
+    datum_y: float,
+    datum_z: float,
+    safety_z: float,
+    travel_feed: int = 6000,
+) -> list[str]:
+    if safety_z <= datum_z:
+        raise ValueError("safety_z must be above datum_z.")
+
+    return [
+        "G90",
+        f"G0 Z{safety_z} F{travel_feed}",
+        f"G0 X{datum_x} Y{datum_y} F{travel_feed}",
+        f"G0 Z{datum_z}",
+    ]
+
+
+def generate_klipper_resume_gcode(
+    datum_x: float,
+    datum_y: float,
+    datum_z: float,
+    safety_z: float,
+    travel_feed: int = 6000,
+) -> list[str]:
+    if safety_z <= datum_z:
+        raise ValueError("safety_z must be above datum_z.")
+
+    return [
+        f"SET_KINEMATIC_POSITION Z={safety_z}",
+        "G90",
+        f"G0 X{datum_x} Y{datum_y} F{travel_feed}",
+        f"G0 Z{datum_z}",
+    ]
+
+
 def _replace_e_value(line: str, new_e: float) -> str:
     if ";" in line:
         code_part, comment = line.split(";", 1)
