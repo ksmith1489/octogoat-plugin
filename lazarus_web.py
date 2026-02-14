@@ -17,7 +17,7 @@ Open:
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from pathlib import Path
 import io
 import os
@@ -360,6 +360,13 @@ class AnchorResult:
     detected_e_mode: str  # "absolute" or "relative"
     last_e_abs: float
     last_motion_f: Optional[float]
+
+
+@dataclass
+class ResumeDatum:
+    x: float
+    y: float
+    z: float
 
 
 def _strip_comment(line: str) -> str:
@@ -757,7 +764,8 @@ def build_resumed_gcode_to_file(
     inject_last_motion_feedrate: bool = True,
     include_user_check_messages: bool = True,  # kept for API compatibility (unused here)
     preview_lines: int = 220,
-) -> Tuple[float, str]:
+    return_metadata: bool = False,
+) -> Tuple[float, str] | Tuple[float, str, Dict[str, Any]]:
     """
     Writes resumed G-code directly to out_path (disk), returns (resume_z, preview_text).
     Designed to avoid large in-RAM copies.
@@ -769,7 +777,10 @@ def build_resumed_gcode_to_file(
     detected_mode = "absolute"
     last_e_abs = 0.0
     last_motion_f: Optional[float] = None
+    current_x: Optional[float] = None
+    current_y: Optional[float] = None
     current_z: Optional[float] = None
+    anchor_datum: Optional[ResumeDatum] = None
     anchor_index: Optional[int] = None
 
     for i, raw in enumerate(io.StringIO(original_gcode_text)):
@@ -796,6 +807,14 @@ def build_resumed_gcode_to_file(
 
         # Track Z/F from motion lines
         if _is_motion(raw):
+            x = _extract_float_param(raw, "X")
+            if x is not None:
+                current_x = float(x)
+
+            y = _extract_float_param(raw, "Y")
+            if y is not None:
+                current_y = float(y)
+
             z = _extract_float_param(raw, "Z")
             if z is not None:
                 current_z = float(z)
@@ -808,6 +827,11 @@ def build_resumed_gcode_to_file(
         if current_z is not None and current_z >= (resume_z - z_match_tol):
             if not should_strip_line(raw) and is_real_printing_move(raw):
                 anchor_index = i
+                anchor_datum = ResumeDatum(
+                    x=float(current_x if current_x is not None else 0.0),
+                    y=float(current_y if current_y is not None else 0.0),
+                    z=float(current_z),
+                )
                 break
 
     if anchor_index is None:
@@ -887,7 +911,17 @@ def build_resumed_gcode_to_file(
         f.write("; --- END RESUMED FILE ---\n")
         _preview_add("; --- END RESUMED FILE ---\n")
 
-    return resume_z, "\n".join(preview_buf)
+    preview_text = "\n".join(preview_buf)
+    if not return_metadata:
+        return resume_z, preview_text
+
+    return resume_z, preview_text, {
+        "datum": {
+            "x": anchor_datum.x if anchor_datum else 0.0,
+            "y": anchor_datum.y if anchor_datum else 0.0,
+            "z": anchor_datum.z if anchor_datum else 0.0,
+        }
+    }
 
 
 def _cleanup_generated() -> None:
@@ -1071,6 +1105,20 @@ def api_jobs():
             mimetype="application/json",
         )
 
+    confirm_raw = request.form.get("user_confirm_nozzle_above_print")
+    confirm_ok = (confirm_raw is True) or (
+        isinstance(confirm_raw, str) and confirm_raw.strip().lower() == "true"
+    )
+    if not confirm_ok:
+        return Response(
+            json.dumps({
+                "ok": False,
+                "error": "Confirm nozzle is above print before resuming.",
+            }),
+            status=422,
+            mimetype="application/json",
+        )
+
     try:
         layer_height = float(request.form.get("layer_height"))
         print_height = float(request.form.get("print_height"))
@@ -1080,7 +1128,7 @@ def api_jobs():
         token = secrets.token_urlsafe(16)
         out_path = str(GEN_DIR / f"{token}.gcode")
 
-        resume_z, preview = build_resumed_gcode_to_file(
+        resume_z, preview, metadata = build_resumed_gcode_to_file(
             original_gcode_text=original_text,
             firmware=firmware,
             layer_height_mm=layer_height,
@@ -1091,6 +1139,7 @@ def api_jobs():
             include_user_check_messages=True,
             out_path=out_path,
             preview_lines=120,
+            return_metadata=True,
         )
 
     except ValueError as e:
@@ -1113,6 +1162,13 @@ def api_jobs():
         json.dumps({
             "ok": True,
             "resume_z": round(resume_z, 3),
+            "datum": metadata["datum"],
+            "resume_gcode": preview.splitlines(),
+            "checklist": [
+                "Confirm nozzle is above print",
+                "Heat nozzle and bed",
+                "Press Resume when ready",
+            ],
             "download_url": f"/download/{token}",
             "preview": preview.splitlines()[:40],
         }),
