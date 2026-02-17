@@ -29,7 +29,7 @@
             self.settings = parameters[0];
 
             self.testOctoGoatConnection = function() {
-                OctoPrint.simpleApiCommand("octogoat", "ping", {})
+                OctoPrint.simpleApiCommand("octoprint_octogoat", "ping", {})
                     .done(function(response) {
                         alert(JSON.stringify(response, null, 2));
                     })
