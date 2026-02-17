@@ -57,6 +57,7 @@ class OctoGoatPlugin(
             {
                 "type": "settings",
                 "name": "OctoGoat",
+                "template": "octogoat_settings.jinja2",
                 "custom_bindings": True,
             }
         ]
