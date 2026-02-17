@@ -1,6 +1,6 @@
 from setuptools import setup
 
-plugin_identifier = "octogoat"
+plugin_identifier = "octoprint_octogoat"
 plugin_package = "octoprint_octogoat"
 plugin_name = "OctoGoat"
 plugin_version = "0.1.0"
