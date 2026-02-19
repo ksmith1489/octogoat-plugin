@@ -24,6 +24,9 @@ import os
 import re
 import secrets
 import time
+import sqlite3
+import uuid
+import stripe
 
 from flask import (
     Flask,
@@ -275,6 +278,34 @@ app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
 
 LAZARUS_API_KEY = os.environ.get("LAZARUS_API_KEY")
+
+# ===================== STRIPE CONFIG =====================
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET")
+
+stripe.api_key = STRIPE_SECRET_KEY
+
+LICENSE_DB = os.environ.get("LICENSE_DB_PATH", "licenses.db")
+
+
+def init_license_db():
+    conn = sqlite3.connect(LICENSE_DB)
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS licenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            license_key TEXT UNIQUE,
+            stripe_customer_id TEXT,
+            subscription_id TEXT,
+            status TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+init_license_db()
+
 
 def require_api_key():
     # Only protect API routes
@@ -1187,7 +1218,83 @@ def api_download(token):
         as_attachment=True,
         download_name=entry["name"],
     )
+# ===================== STRIPE WEBHOOK =====================
 
+@app.route("/stripe-webhook", methods=["POST"])
+def stripe_webhook():
+    payload = request.data
+    sig_header = request.headers.get("Stripe-Signature")
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload,
+            sig_header,
+            STRIPE_WEBHOOK_SECRET
+        )
+    except Exception:
+        return Response("Invalid webhook", status=400)
+
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+
+        stripe_customer_id = session.get("customer")
+        subscription_id = session.get("subscription")
+
+        license_key = str(uuid.uuid4())
+
+        conn = sqlite3.connect(LICENSE_DB)
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO licenses (license_key, stripe_customer_id, subscription_id, status)
+            VALUES (?, ?, ?, ?)
+            """,
+            (license_key, stripe_customer_id, subscription_id, "active"),
+        )
+        conn.commit()
+        conn.close()
+
+    if event["type"] == "customer.subscription.deleted":
+        subscription = event["data"]["object"]
+        subscription_id = subscription.get("id")
+
+        conn = sqlite3.connect(LICENSE_DB)
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE licenses SET status='canceled' WHERE subscription_id=?",
+            (subscription_id,),
+        )
+        conn.commit()
+        conn.close()
+
+    return Response("OK", status=200)
+    
+# ===================== LICENSE VALIDATION =====================
+
+@app.route("/validate", methods=["POST"])
+def validate_license():
+    try:
+        data = request.get_json()
+        license_key = data.get("license_key")
+    except Exception:
+        return jsonify({"valid": False}), 400
+
+    if not license_key:
+        return jsonify({"valid": False}), 400
+
+    conn = sqlite3.connect(LICENSE_DB)
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT status FROM licenses WHERE license_key=?",
+        (license_key,),
+    )
+    row = cur.fetchone()
+    conn.close()
+
+    if row and row[0] == "active":
+        return jsonify({"valid": True})
+    else:
+        return jsonify({"valid": False})
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5000"))
