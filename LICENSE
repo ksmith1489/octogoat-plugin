@@ -1,21 +1,66 @@
-MIT License
 
-Copyright (c) 2025 k
+OctoGOAT End User License Agreement (EULA)
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Effective Date: []
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+This End User License Agreement (“Agreement”) governs the use of the OctoGOAT software plugin (“Software”) provided by [Logos Rising / K. B. Smith] (“Licensor”).
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+By installing or using the Software, you agree to the terms below.
+
+1. License Grant
+
+Upon valid purchase, Licensor grants you a non-exclusive, non-transferable, revocable license to use the Software for personal or internal commercial use, subject to this Agreement.
+
+This license permits:
+
+Use on your own OctoPrint installation(s)
+
+Use in personal or commercial additive manufacturing environments
+
+Installation on multiple machines owned and operated by you
+
+2. Restrictions
+
+You may NOT:
+
+Redistribute the Software
+
+Resell the Software
+
+Offer the Software as a hosted or SaaS service
+
+Modify and distribute modified versions
+
+Reverse engineer the Software for the purpose of commercial replication
+
+Share license keys publicly or with unauthorized users
+
+3. License Validation
+
+The Software may require periodic license validation.
+Failure to maintain an active license may result in restricted access to premium features.
+
+4. Trial Use
+
+The Software may provide limited trial functionality (such as one complimentary resume operation). Continued use beyond trial requires purchase of a valid license.
+
+5. Ownership
+
+The Software and all associated intellectual property remain the exclusive property of Licensor.
+
+This Agreement does not grant ownership rights.
+
+6. Disclaimer
+
+The Software is provided “as is.”
+Licensor is not liable for print failures, hardware damage, data loss, or consequential damages resulting from use of the Software.
+
+Users assume responsibility for safe operation of their equipment.
+
+7. Termination
+
+Licensor may revoke license access for violation of this Agreement.
+
+8. Governing Law
+
+This Agreement shall be governed by the laws of the United States and the State of [NC].
