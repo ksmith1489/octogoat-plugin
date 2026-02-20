@@ -21,8 +21,8 @@ class OctoGoatPlugin(
         }
     
     def get_assets(self):
-    return {
-        "js": ["js/octogoat.js"],
+        return {
+            "js": ["js/octogoat.js"],
     }
 
     
@@ -122,7 +122,8 @@ class OctoGoatPlugin(
        
 
     def get_template_configs(self):
-         {
+        return[
+           {
             "type": "settings",
             "name": "OctoGoat",
             "template": "octogoat_settings.jinja2",
