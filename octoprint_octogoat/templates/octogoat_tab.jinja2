@@ -1,31 +1,13 @@
-<div id="octogoat-tab" data-bind="with: octogoatViewModel">
+<h3>OctoGOAT</h3>
 
-    <h3>OctoGOAT</h3>
+<label>
+    <input type="checkbox" data-bind="checked: confirmed">
+    I confirm temps and coordinates are correct
+</label>
 
-    <label>
-        <input type="checkbox" data-bind="checked: confirmed">
-        I confirm temps and coordinates are correct
-    </label>
+<br><br>
 
-    <br><br>
-
-    <button class="btn btn-primary"
-        data-bind="
-            enable: confirmed() && (freeResumesRemaining() > 0 || licenseValid()),
-            click: resumePrint
-        ">
-        RESUME
-    </button>
-
-    <br><br>
-
-    <div data-bind="visible: freeResumesRemaining() > 0 && !licenseValid()">
-        Free resumes remaining:
-        <strong data-bind="text: freeResumesRemaining"></strong>
-    </div>
-
-    <div data-bind="visible: !licenseValid() && freeResumesRemaining() === 0">
-        <strong>License required to continue.</strong>
-    </div>
-
-</div>
+<button class="btn btn-primary"
+        data-bind="enable: confirmed, click: resumePrint">
+    RESUME
+</button>

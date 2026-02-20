@@ -1,44 +1,28 @@
-OCTOPRINT_VIEWMODELS.push({
-    construct: function(parameters) {
+$(function () {
+
+    function OctoGoatViewModel(parameters) {
         var self = this;
 
         self.settings = parameters[0];
 
         self.confirmed = ko.observable(false);
 
-        self.freeResumesRemaining = ko.observable(
-            self.settings.settings.plugins.octoprint_octogoat.free_resumes_remaining()
-        );
-
-        self.licenseValid = ko.observable(
-            self.settings.settings.plugins.octoprint_octogoat.cached_valid()
-        );
-
-        self.resumePrint = function() {
+        self.resumePrint = function () {
             OctoPrint.simpleApiCommand("octoprint_octogoat", "resume", {})
-                .done(function(response) {
-                    if (response.locked) {
-                        new PNotify({
-                            title: "License Required",
-                            text: "Please activate your license.",
-                            type: "error"
-                        });
-                    } else if (response.error) {
-                        new PNotify({
-                            title: "Error",
-                            text: response.error,
-                            type: "error"
-                        });
-                    } else {
-                        new PNotify({
-                            title: "Resume Sent",
-                            text: "Resume command sent successfully.",
-                            type: "success"
-                        });
-                    }
+                .done(function (response) {
+                    new PNotify({
+                        title: "Resume",
+                        text: "Resume command sent",
+                        type: "success"
+                    });
                 });
         };
-    },
-    dependencies: ["settingsViewModel"],
-    elements: ["#octogoat-tab"]
+    }
+
+    OCTOPRINT_VIEWMODELS.push([
+        OctoGoatViewModel,
+        ["settingsViewModel"],
+        ["#tab_plugin_octoprint_octogoat"]
+    ]);
+
 });
