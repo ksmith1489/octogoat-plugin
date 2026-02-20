@@ -7,8 +7,11 @@ import octoprint.plugin
 
 class OctoGoatPlugin(
     octoprint.plugin.SettingsPlugin,
+    octoprint.plugin.AssetPlugin,
     octoprint.plugin.TemplatePlugin,
-    octoprint.plugin.SimpleApiPlugin,
+    octoprint.plugin.SimpleApiPlugin
+):
+
 ):
     def get_settings_defaults(self):
         return {
