@@ -1,37 +1,44 @@
-$(function() {
-    function OctogoatViewModel(parameters) {
+OCTOPRINT_VIEWMODELS.push({
+    construct: function(parameters) {
         var self = this;
 
         self.settings = parameters[0];
 
         self.confirmed = ko.observable(false);
+
         self.freeResumesRemaining = ko.observable(
             self.settings.settings.plugins.octoprint_octogoat.free_resumes_remaining()
         );
+
         self.licenseValid = ko.observable(
             self.settings.settings.plugins.octoprint_octogoat.cached_valid()
         );
 
         self.resumePrint = function() {
-            OctoPrint.simpleApiCommand("octoprint_octogoat", "resume", {
-                layer_height: 0.2,   // replace later with real inputs
-                print_height: 5.0,
-                firmware: "klipper"
-            }).done(function(response) {
-                if (response.locked) {
-                    alert("License required.");
-                } else if (response.error) {
-                    alert(response.error);
-                } else {
-                    alert("Resume sent.");
-                }
-            });
+            OctoPrint.simpleApiCommand("octoprint_octogoat", "resume", {})
+                .done(function(response) {
+                    if (response.locked) {
+                        new PNotify({
+                            title: "License Required",
+                            text: "Please activate your license.",
+                            type: "error"
+                        });
+                    } else if (response.error) {
+                        new PNotify({
+                            title: "Error",
+                            text: response.error,
+                            type: "error"
+                        });
+                    } else {
+                        new PNotify({
+                            title: "Resume Sent",
+                            text: "Resume command sent successfully.",
+                            type: "success"
+                        });
+                    }
+                });
         };
-    }
-
-    OCTOPRINT_VIEWMODELS.push({
-        construct: OctogoatViewModel,
-        dependencies: ["settingsViewModel"],
-        elements: ["#octogoat-tab"]
-    });
+    },
+    dependencies: ["settingsViewModel"],
+    elements: ["#octogoat-tab"]
 });
