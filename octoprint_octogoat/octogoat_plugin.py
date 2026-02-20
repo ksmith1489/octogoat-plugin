@@ -51,8 +51,8 @@ class OctoGoatPlugin(
         if cached_valid and (time.time() - last_validation_ts) < (72 * 3600):
             return True
 
-    if not license_key:
-        return False
+        if not license_key:
+           return False
 
         try:
             response = requests.post(
@@ -70,15 +70,15 @@ class OctoGoatPlugin(
             if cached_valid and (time.time() - last_validation_ts) < (7 * 24 * 3600):
                 return True
 
-        self._settings.set(["cached_valid"], False)
-        self._settings.save()
-        return False
+            self._settings.set(["cached_valid"], False)
+            self._settings.save()
+                return False
 
     def get_api_commands(self):
         return {
             "ping": [],
-        }   "resume": ["layer_height", "print_height", "firmware"],
-
+            "resume": ["layer_height", "print_height", "firmware"],
+        {
     def on_api_command(self, command, data):
         if command == "ping":
             return self._handle_ping()
