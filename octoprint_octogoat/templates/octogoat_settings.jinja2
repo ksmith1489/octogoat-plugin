@@ -32,22 +32,21 @@
 </div>
 
 <script type="text/javascript">
+    
+function OctoGoatSettingsViewModel(parameters) {
+    var self = this;
+    self.settings = parameters[0];
 
-
-    function OctoGoatSettingsViewModel(parameters) {
-        var self = this;
-        self.settings = parameters[0];
-
-        self.testOctoGoatConnection = function() {
-            OctoPrint.simpleApiCommand("octoprint_octogoat", "ping", {})
-                .done(function(response) {
-                    alert(JSON.stringify(response, null, 2));
+    self.testOctoGoatConnection = function() {
+        OctoPrint.simpleApiCommand("octoprint_octogoat", "ping", {})
+            .done(function(response) {
+                alert(JSON.stringify(response, null, 2));
                 })
-                .fail(function(jqXHR) {
-                    var payload = jqXHR.responseJSON ||
-                                  {error: jqXHR.responseText || "Request failed"};
-                    alert(JSON.stringify(payload, null, 2));
-                });
+            .fail(function(jqXHR) {
+                var payload = jqXHR.responseJSON ||
+                {error: jqXHR.responseText || "Request failed"};
+                alert(JSON.stringify(payload, null, 2));
+            });
         };
     }
 
