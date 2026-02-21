@@ -1,10 +1,12 @@
-<div id="settings_plugin_octoprint_octogoat">
+<form class="form-horizontal">
     <h3>OctoGoat</h3>
 
     <div class="control-group">
-        <label class="control-label" for="octoprint_octogoat_api_key">API Key</label>
+        <label class="control-label" for="settings-octogoat-api">
+            API Key
+        </label>
         <div class="controls">
-            <input id="octoprint_octogoat_api_key"
+            <input id="settings-octogoat-api"
                    type="text"
                    class="input-block-level"
                    data-bind="value: settings.plugins.octoprint_octogoat.api_key" />
@@ -12,9 +14,11 @@
     </div>
 
     <div class="control-group">
-        <label class="control-label" for="octoprint_octogoat_engine_url">Engine URL</label>
+        <label class="control-label" for="settings-octogoat-url">
+            Engine URL
+        </label>
         <div class="controls">
-            <input id="octoprint_octogoat_engine_url"
+            <input id="settings-octogoat-url"
                    type="text"
                    class="input-block-level"
                    data-bind="value: settings.plugins.octoprint_octogoat.engine_url" />
@@ -23,38 +27,11 @@
 
     <div class="control-group">
         <div class="controls">
-            <button class="btn"
+            <button type="button"
+                    class="btn btn-primary"
                     data-bind="click: testOctoGoatConnection">
                 Test Connection
             </button>
         </div>
     </div>
-</div>
-
-<script type="text/javascript">
-    
-function OctoGoatSettingsViewModel(parameters) {
-    var self = this;
-    self.settings = parameters[0];
-
-    self.testOctoGoatConnection = function() {
-        OctoPrint.simpleApiCommand("octoprint_octogoat", "ping", {})
-            .done(function(response) {
-                alert(JSON.stringify(response, null, 2));
-                })
-            .fail(function(jqXHR) {
-                var payload = jqXHR.responseJSON ||
-                {error: jqXHR.responseText || "Request failed"};
-                alert(JSON.stringify(payload, null, 2));
-            });
-        };
-    }
-
-    OCTOPRINT_VIEWMODELS.push({
-        construct: OctoGoatSettingsViewModel,
-        dependencies: ["settingsViewModel"],
-        elements: ["#settings_plugin_octoprint_octogoat"]
-    });
-
-});
-</script>
+</form>

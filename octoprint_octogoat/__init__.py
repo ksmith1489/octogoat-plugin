@@ -10,7 +10,8 @@ class OctoGoatPlugin(
     def get_template_configs(self):
         return [
             dict(type="tab", name="OctoGoat"),
-        ]
+            dict(type="settings", name="OctoGoat", custom_bindings=False)
+       ]
 
     def get_assets(self):
         return dict(
