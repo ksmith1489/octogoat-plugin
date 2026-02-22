@@ -1,64 +1,42 @@
-$(function () {
-  function OctoGoatViewModel(parameters) {
-    var self = this;
+$(function() {
 
-    self.settingsViewModel = parameters[0];
+    function OctoGoatViewModel(parameters) {
+        var self = this;
 
-    self.confirmed = ko.observable(false);
+        self.settingsViewModel = parameters[0];
 
-    // These keep tab bindings alive even before we wire real values
-    self.freeResumesRemaining = ko.observable(3);
-    self.licenseValid = ko.observable(true);
+        self.confirmed = ko.observable(false);
+        self.freeResumesRemaining = ko.observable(3);
+        self.licenseValid = ko.observable(true);
 
-    self.resumePrint = function () {
-      // minimal: just hit plugin API so we know wiring works
-      OctoPrint.simpleApiCommand("octoprint_octogoat", "ping", {})
-        .done(function (resp) {
-          new PNotify({
-            title: "OctoGOAT",
-            text: "Ping OK",
-            type: "success"
-          });
-        })
-        .fail(function () {
-          new PNotify({
-            title: "OctoGOAT",
-            text: "Ping failed",
-            type: "error"
-          });
-        });
+        self.resumePrint = function() {
+            OctoPrint.simpleApiCommand("octoprint_octogoat", "resume", {})
+                .done(function(response) {
+                    new PNotify({
+                        title: "Resume",
+                        text: "Resume triggered.",
+                        type: "success"
+                    });
+                })
+                .fail(function() {
+                    new PNotify({
+                        title: "Error",
+                        text: "Resume failed.",
+                        type: "error"
+                    });
+                });
 
-      return false;
-    };
+            return false;
+        };
+    }
 
-    self.testOctoGoatConnection = function () {
-      OctoPrint.simpleApiCommand("octoprint_octogoat", "ping", {})
-        .done(function () {
-          new PNotify({
-            title: "OctoGOAT",
-            text: "Engine ping OK",
-            type: "success"
-          });
-        })
-        .fail(function () {
-          new PNotify({
-            title: "OctoGOAT",
-            text: "Engine ping failed",
-            type: "error"
-          });
-        });
+    OCTOPRINT_VIEWMODELS.push({
+        construct: OctoGoatViewModel,
+        dependencies: ["settingsViewModel"],
+        elements: [
+            "#tab_plugin_octoprint_octogoat",
+            "#settings_plugin_octoprint_octogoat"
+        ]
+    });
 
-      return false;
-    };
-
-    self.onStartupComplete = function () {
-      console.log("OctoGoat loaded");
-    };
-  }
-
-  OCTOPRINT_VIEWMODELS.push({
-    construct: OctoGoatViewModel,
-    dependencies: ["settingsViewModel"],
-    elements: ["#tab_plugin_octoprint_octogoat", "#settings_plugin_octoprint_octogoat"]
-  });
 });
