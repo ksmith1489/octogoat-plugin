@@ -7,6 +7,10 @@ $(function() {
 
         self.confirmed = ko.observable(false);
 
+        // Dummy placeholders so bindings don’t explode
+        self.freeResumesRemaining = ko.observable(3);
+        self.licenseValid = ko.observable(true);
+
         self.resumePrint = function() {
             OctoPrint.simpleApiCommand("octoprint_octogoat", "resume", {})
                 .done(function(response) {
@@ -22,18 +26,20 @@ $(function() {
                         text: "Resume failed.",
                         type: "error"
                     });
-       
-	    };
+                });
+
+            return false;
+        };
 
         self.onStartupComplete = function () {
-            self.setupUI();
-        };		
-        
-      
-   	OCTOPRINT_VIEWMODELS.push({
+            console.log("OctoGoat loaded");
+        };
+    }
+
+    OCTOPRINT_VIEWMODELS.push({
         construct: OctoGoatViewModel,
         dependencies: ["settingsViewModel"],
-        elements: ["#gen_plugin_octoprint_octogoat"]
-        });
+        elements: ["#gen_plugin_octogoat"]
+    });
 
-    
+});
