@@ -40,28 +40,25 @@ class OctoGoatPlugin(
 
     # ----------------------------
     # Templates / Assets
-    # ----------------------------
     def get_template_configs(self):
         return [
             dict(
                 type="tab",
                 name="OctoGoat",
                 template="octogoat_tab.jinja2",
-                custom_bindings=False
+                custom_bindings=False,
             ),
             dict(
                 type="settings",
                 name="OctoGoat",
                 template="octogoat_settings.jinja2",
-                custom_bindings=False
+                custom_bindings=False,
             ),
         ]
-    ]
-        ]
-
+   
     def get_assets(self):
         return dict(js=["js/octogoat.js"])
-
+     
     # ----------------------------
     # API
     # ----------------------------
