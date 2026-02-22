@@ -39,7 +39,7 @@ $(function() {
     OCTOPRINT_VIEWMODELS.push({
         construct: OctoGoatViewModel,
         dependencies: ["settingsViewModel"],
-        elements: ["#gen_plugin_octogoat"]
+        elements: ["#tab_plugin_octoprint_octogoat"]
     });
 
 });
