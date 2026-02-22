@@ -3,7 +3,7 @@ $(function() {
     function OctoGoatViewModel(parameters) {
         var self = this;
 
-        self.settings = parameters[0];
+        self.settingsViewModel = parameters[0];
 
         self.confirmed = ko.observable(false);
 
@@ -22,14 +22,18 @@ $(function() {
                         text: "Resume failed.",
                         type: "error"
                     });
-                });
-        };
-    }
+       
+	    };
 
-    // IMPORTANT: Do NOT wrap this in any extra closures
-    OCTOPRINT_VIEWMODELS.push([
-        OctoGoatViewModel,
-        ["settingsViewModel"],
-        ["#tab_plugin_octoprint_octogoat"]
-    ]);
-});
+        self.onStartupComplete = function () {
+            self.setupUI();
+        };		
+        
+      
+   	OCTOPRINT_VIEWMODELS.push({
+        construct: OctoGoatViewModel,
+        dependencies: ["settingsViewModel"],
+        elements: ["#gen_plugin_octoprint_octogoat"]
+        });
+
+    
