@@ -1,3 +1,4 @@
+print("OCTOGOAT MODULE IMPORTED")
 import io
 import os
 import time
