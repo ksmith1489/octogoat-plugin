@@ -15,10 +15,13 @@ $(function () {
                     alert(JSON.stringify(payload, null, 2));
                 });
         };
-    }
-
-    OCTOPRINT_VIEWMODELS.push({
+        self.resumePrint = function () {
+            alert("Resume clicked (stub). Next step: wire this to build_resumed_gcode + job creation.");
+        };
+    
+	OCTOPRINT_VIEWMODELS.push({
         construct: OctoGoatViewModel,
         dependencies: ["settingsViewModel"],
         elements: ["#settings_plugin_octogoat"]
     });
+ });
