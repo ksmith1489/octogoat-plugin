@@ -20,6 +20,6 @@ $(function () {
     OCTOPRINT_VIEWMODELS.push({
         construct: OctoGoatViewModel,
         dependencies: ["settingsViewModel"]
-        // 🔥 REMOVE the "elements" line completely
+        elements: ["#settings_plugin_octogoat"]
     });
 });
