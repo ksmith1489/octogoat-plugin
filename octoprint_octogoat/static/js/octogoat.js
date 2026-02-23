@@ -11,8 +11,7 @@ $(function () {
                     alert(JSON.stringify(resp, null, 2));
                 })
                 .fail(function (jqXHR) {
-                    var payload = jqXHR.responseJSON || { error: jqXHR.responseText || "Request failed" };
-                    alert(JSON.stringify(payload, null, 2));
+                    alert("Request failed");
                 });
         };
     }
@@ -20,6 +19,6 @@ $(function () {
     OCTOPRINT_VIEWMODELS.push({
         construct: OctoGoatViewModel,
         dependencies: ["settingsViewModel"],
-        elements: ["#settings_plugin_octogoat", ".section"]
+        elements: ["#settings_plugin_octogoat"]
     });
 });
