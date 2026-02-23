@@ -19,7 +19,6 @@ $(function () {
 
     OCTOPRINT_VIEWMODELS.push({
         construct: OctoGoatViewModel,
-        dependencies: ["settingsViewModel"]
+        dependencies: ["settingsViewModel"],
         elements: ["#settings_plugin_octogoat"]
     });
-});
