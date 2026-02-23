@@ -32,8 +32,8 @@ class OctoGoatPlugin(
         return [
             dict(
                 type="generic",
-                template="octogoat_tab.jinja2",
-                custom_bindings=False,
+                template="octogoat_generic.jinja2",
+                custom_bindings=True,
             ),
             dict(
                 type="settings",
