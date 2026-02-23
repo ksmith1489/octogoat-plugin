@@ -3,7 +3,7 @@ $(function () {
         var self = this;
 
         self.settingsViewModel = parameters[0];
-        self.settings = self.settingsViewModel.settings;   // <-- IMPORTANT
+        self.settings = self.settingsViewModel.settings;
 
         self.confirmed = ko.observable(false);
 
@@ -19,13 +19,12 @@ $(function () {
         };
 
         self.resumePrint = function () {
-            alert("Resume clicked (stub). Next step: wire this to build_resumed_gcode + job creation.");
+            alert("Resume clicked (stub).");
         };
     }
 
     OCTOPRINT_VIEWMODELS.push({
         construct: OctoGoatViewModel,
-        dependencies: ["settingsViewModel"],
-        elements: ["#settings_plugin_octogoat", "#tab_plugin_octogoat"]
+        dependencies: ["settingsViewModel"]
     });
 });

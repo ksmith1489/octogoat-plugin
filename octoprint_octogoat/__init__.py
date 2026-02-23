@@ -33,12 +33,12 @@ class OctoGoatPlugin(
             dict(
                 type="generic",
                 template="octogoat_tab.jinja2",
-                custom_bindings=True,
+                custom_bindings=False,
             ),
             dict(
                 type="settings",
                 template="octogoat_settings.jinja2",
-                custom_bindings=True,
+                custom_bindings=False,
             ),
         ]
 
