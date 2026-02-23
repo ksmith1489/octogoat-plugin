@@ -1,42 +1,25 @@
-$(function() {
-
+$(function () {
     function OctoGoatViewModel(parameters) {
         var self = this;
 
-        self.settingsViewModel = parameters[0];
-
+        self.settings = parameters[0];
         self.confirmed = ko.observable(false);
-        self.freeResumesRemaining = ko.observable(3);
-        self.licenseValid = ko.observable(true);
 
-        self.resumePrint = function() {
-            OctoPrint.simpleApiCommand("octoprint_octogoat", "resume", {})
-                .done(function(response) {
-                    new PNotify({
-                        title: "Resume",
-                        text: "Resume triggered.",
-                        type: "success"
-                    });
+        self.testConnection = function () {
+            OctoPrint.simpleApiCommand("octogoat", "ping", {})
+                .done(function (resp) {
+                    alert(JSON.stringify(resp, null, 2));
                 })
-                .fail(function() {
-                    new PNotify({
-                        title: "Error",
-                        text: "Resume failed.",
-                        type: "error"
-                    });
+                .fail(function (jqXHR) {
+                    var payload = jqXHR.responseJSON || { error: jqXHR.responseText || "Request failed" };
+                    alert(JSON.stringify(payload, null, 2));
                 });
-
-            return false;
         };
     }
 
     OCTOPRINT_VIEWMODELS.push({
         construct: OctoGoatViewModel,
         dependencies: ["settingsViewModel"],
-        elements: [
-            "#tab_plugin_octoprint_octogoat",
-            "#settings_plugin_octoprint_octogoat"
-        ]
+        elements: ["#settings_plugin_octogoat", ".section"]
     });
-
 });
