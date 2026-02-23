@@ -38,7 +38,7 @@ class OctoGoatPlugin(
             dict(
                 type="settings",
                 template="octogoat_settings.jinja2",
-                custom_bindings=False,
+                custom_bindings=True,
             ),
         ]
 
