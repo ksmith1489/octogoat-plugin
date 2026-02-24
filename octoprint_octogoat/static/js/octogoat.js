@@ -1,9 +1,9 @@
 $(function () {
+
     function OctoGoatViewModel(parameters) {
         var self = this;
 
         self.settingsViewModel = parameters[0];
-        self.settings = self.settingsViewModel.settings;
 
         self.confirmed = ko.observable(false);
 
@@ -13,8 +13,7 @@ $(function () {
                     alert(JSON.stringify(resp, null, 2));
                 })
                 .fail(function (jqXHR) {
-                    var payload = jqXHR.responseJSON || { error: jqXHR.responseText || "Request failed" };
-                    alert(JSON.stringify(payload, null, 2));
+                    alert("Request failed");
                 });
         };
 
@@ -25,7 +24,7 @@ $(function () {
 
     OCTOPRINT_VIEWMODELS.push({
         construct: OctoGoatViewModel,
-        dependencies: ["settingsViewModel"],
-        elements: ["#settings_plugin_octogoat", "#generic_plugin_octogoat"]
+        dependencies: ["settingsViewModel"]
     });
+
 });
