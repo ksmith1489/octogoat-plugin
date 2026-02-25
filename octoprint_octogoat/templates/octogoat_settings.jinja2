@@ -1,0 +1,33 @@
+<div class="section">
+  <h3>OctoGoat Settings</h3>
+
+  <div class="control-group">
+    <label class="control-label">Engine URL</label>
+    <div class="controls">
+      <input type="text"
+             class="input-block-level"
+             data-bind="value: settings.plugins.octogoat.engine_url">
+      <p class="help-block">Where the Lazarus engine is hosted (default is cloud).</p>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label class="control-label">License Key</label>
+    <div class="controls">
+      <input type="text"
+             class="input-block-level"
+             data-bind="value: settings.plugins.octogoat.api_key">
+      <p class="help-block">Paste your OctoGoat license key here.</p>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label class="control-label">Free resumes remaining</label>
+    <div class="controls">
+      <input type="number"
+             class="input-small"
+             min="0"
+             data-bind="value: settings.plugins.octogoat.free_resumes_remaining">
+    </div>
+  </div>
+</div>
