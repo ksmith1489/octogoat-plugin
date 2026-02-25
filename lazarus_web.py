@@ -1269,8 +1269,70 @@ def stripe_webhook():
     return Response("OK", status=200)
     
 # ===================== LICENSE VALIDATION =====================
+@app.route("/success")
+def stripe_success():
+    session_id = request.args.get("session_id")
+    if not session_id:
+        return "Missing session_id", 400
 
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+    except Exception as e:
+        return f"Invalid session: {e}", 400
+
+    customer_id = session.get("customer")
+
+    if not customer_id:
+        return "No customer found for this session.", 400
+
+    conn = sqlite3.connect(LICENSE_DB)
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT license_key 
+        FROM licenses 
+        WHERE stripe_customer_id=? 
+        ORDER BY id DESC 
+        LIMIT 1
+        """,
+        (customer_id,)
+    )
+    row = cur.fetchone()
+    conn.close()
+
+    if not row:
+        return "License not found yet. Please refresh in a few seconds."
+
+    license_key = row[0]
+
+    return f"""
+    <html>
+    <head>
+        <title>OctoGoat Activated</title>
+        <style>
+            body {{ font-family: sans-serif; background:#111; color:#eee; padding:40px; }}
+            .box {{ background:#1b1b1b; padding:30px; border-radius:12px; max-width:600px; }}
+            .key {{ font-size:20px; background:#222; padding:12px; border-radius:8px; margin:20px 0; }}
+            button {{ padding:10px 16px; border:none; border-radius:8px; background:#3a7; color:#fff; cursor:pointer; }}
+        </style>
+    </head>
+    <body>
+        <div class="box">
+            <h2>Thank you for your purchase.</h2>
+            <p>Your OctoGoat License Key:</p>
+            <div class="key">{license_key}</div>
+            <p>Copy this key and paste it into:</p>
+            <b>OctoPrint → Settings → OctoGoat → License Key</b>
+            <br><br>
+            <button onclick="navigator.clipboard.writeText('{license_key}')">
+                Copy License Key
+            </button>
+        </div>
+    </body>
+    </html>
+    """
 @app.route("/validate", methods=["POST"])
+
 def validate_license():
     try:
         data = request.get_json()
