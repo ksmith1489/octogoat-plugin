@@ -33,7 +33,7 @@ $(function () {
         };
 
         self.openCheckout = function () {
-            window.open("https://lazarus3dprint.com/checkout", "_blank");
+            window.open("https://buy.stripe.com/7sYbJ18IfaFp4L7fjbenS05", "_blank");
         };
 
         self.testConnection = function () {
