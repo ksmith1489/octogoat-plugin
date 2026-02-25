@@ -1,0 +1,43 @@
+<div id="octogoat_tab_root" class="tab-pane">
+  <div class="container-fluid">
+
+    <h2 style="margin-top:0;">OctoGoat</h2>
+
+    <!-- NOT ACTIVATED -->
+    <div data-bind="visible: !licenseValid()">
+      <div class="alert alert-warning">
+        <b>Not activated.</b> Enter your license key in Settings → OctoGoat, or activate below.
+      </div>
+
+      <button class="btn btn-success" data-bind="click: openCheckout">
+        Activate OctoGoat
+      </button>
+
+      <button class="btn" style="margin-left:8px;" data-bind="click: validateLicense">
+        Re-check license
+      </button>
+    </div>
+
+    <!-- ACTIVATED -->
+    <div data-bind="visible: licenseValid">
+      <div class="alert alert-success">
+        <b>License verified.</b> OctoGoat is ready.
+      </div>
+
+      <button class="btn btn-primary" data-bind="click: testConnection">
+        Test Engine Connection
+      </button>
+
+      <button class="btn" style="margin-left:8px;" data-bind="click: validateLicense">
+        Re-check license
+      </button>
+
+      <hr>
+
+      <button class="btn btn-warning" data-bind="click: resumePrint">
+        Resume Print (stub)
+      </button>
+    </div>
+
+  </div>
+</div>

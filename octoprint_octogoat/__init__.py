@@ -3,6 +3,8 @@ from __future__ import absolute_import
 
 import octoprint.plugin
 import requests
+
+# (keep imported if you need it later; not used in this refactor yet)
 from .resume_engine import build_resumed_gcode
 
 
@@ -13,48 +15,49 @@ class OctoGoatPlugin(
     octoprint.plugin.SimpleApiPlugin,
 ):
 
-    ## -----------------------
-    ## Settings
-    ## -----------------------
+    # -----------------------
+    # Settings
+    # -----------------------
 
     def get_settings_defaults(self):
         return dict(
-            api_key="",
+            api_key="",  # this is your LICENSE KEY
             engine_url="https://app.lazarus3dprint.com",
             free_resumes_remaining=1,
-            license_valid=False,
         )
 
-    ## -----------------------
-    ## Templates
-    ## -----------------------
+    # -----------------------
+    # Templates
+    # -----------------------
 
     def get_template_configs(self):
         return [
             dict(
-                type="generic",
-                template="octogoat_generic.jinja2",
+                type="tab",
+                name="OctoGoat",
+                template="octogoat_tab.jinja2",
                 custom_bindings=True,
             ),
             dict(
                 type="settings",
+                name="OctoGoat",
                 template="octogoat_settings.jinja2",
-                custom_bindings=False,
+                custom_bindings=False,  # IMPORTANT: keep settings simple + default-bound
             ),
         ]
 
-    ## -----------------------
-    ## Assets
-    ## -----------------------
+    # -----------------------
+    # Assets
+    # -----------------------
 
     def get_assets(self):
         return dict(
             js=["js/octogoat.js"],
         )
 
-    ## -----------------------
-    ## Simple API
-    ## -----------------------
+    # -----------------------
+    # Simple API
+    # -----------------------
 
     def get_api_commands(self):
         return dict(
@@ -65,14 +68,10 @@ class OctoGoatPlugin(
     def on_api_command(self, command, data):
 
         if command == "ping":
-            return dict(
-                ok=True,
-                message="OctoGoat API reachable"
-            )
+            return dict(ok=True, message="OctoGoat API reachable")
 
         if command == "validate":
-
-            license_key = data.get("license_key")
+            license_key = (data or {}).get("license_key", "").strip()
             if not license_key:
                 return dict(valid=False)
 
@@ -80,21 +79,20 @@ class OctoGoatPlugin(
             validate_url = f"{engine_url}/validate"
 
             try:
-                response = requests.post(
+                r = requests.post(
                     validate_url,
                     json={"license_key": license_key},
                     timeout=10,
                 )
-
-                if response.status_code == 200:
-                    result = response.json()
-                    return dict(valid=result.get("valid", False))
-                else:
+                if r.status_code != 200:
                     return dict(valid=False)
-
+                payload = r.json() if r.content else {}
+                return dict(valid=(payload.get("valid") is True))
             except Exception as exc:
-                self._logger.error(f"License validation failed: {exc}")
+                self._logger.error("License validation failed: %s", exc)
                 return dict(valid=False)
+
+        return None
 
 
 __plugin_name__ = "OctoGoat"
