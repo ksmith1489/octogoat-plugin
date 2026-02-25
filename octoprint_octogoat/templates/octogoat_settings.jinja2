@@ -1,57 +1,33 @@
 <div class="section">
-    <h3>OctoGoat Settings</h3>
+  <h3>OctoGoat Settings</h3>
 
-    <!-- LICENSE STATUS -->
-    <div class="control-group">
-        <label class="control-label">License Status</label>
-        <div class="controls">
-            <span data-bind="visible: licenseValid" style="color: green;">
-                ✓ Active
-            </span>
-            <span data-bind="visible: !licenseValid()" style="color: red;">
-                Not Activated
-            </span>
-        </div>
+  <div class="control-group">
+    <label class="control-label">Engine URL</label>
+    <div class="controls">
+      <input type="text"
+             class="input-block-level"
+             data-bind="value: settings.plugins.octogoat.engine_url">
+      <p class="help-block">Where the Lazarus engine is hosted (default is cloud).</p>
     </div>
+  </div>
 
-    <div class="control-group" data-bind="visible: !licenseValid()">
-        <div class="controls">
-            <button class="btn btn-success"
-                    data-bind="click: openCheckout">
-                Activate OctoGOAT
-            </button>
-        </div>
+  <div class="control-group">
+    <label class="control-label">License Key</label>
+    <div class="controls">
+      <input type="text"
+             class="input-block-level"
+             data-bind="value: settings.plugins.octogoat.api_key">
+      <p class="help-block">Paste your OctoGoat license key here.</p>
     </div>
+  </div>
 
-    <!-- EXISTING ENGINE SETTINGS -->
-    <div data-bind="visible: licenseValid">
-
-        <div class="control-group">
-            <label class="control-label">Engine URL</label>
-            <div class="controls">
-                <input type="text"
-                       class="input-block-level"
-                       data-bind="value: settings.plugins.octogoat.engine_url">
-            </div>
-        </div>
-
-        <div class="control-group">
-            <label class="control-label">API Key</label>
-            <div class="controls">
-                <input type="text"
-                       class="input-block-level"
-                       data-bind="value: settings.plugins.octogoat.api_key">
-            </div>
-        </div>
-
-        <div class="control-group">
-            <div class="controls">
-                <button class="btn btn-primary"
-                        data-bind="click: $root.testConnection">
-                    Test Connection
-                </button>
-            </div>
-        </div>
-
+  <div class="control-group">
+    <label class="control-label">Free resumes remaining</label>
+    <div class="controls">
+      <input type="number"
+             class="input-small"
+             min="0"
+             data-bind="value: settings.plugins.octogoat.free_resumes_remaining">
     </div>
+  </div>
 </div>
