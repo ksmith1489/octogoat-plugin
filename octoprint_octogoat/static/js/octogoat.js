@@ -6,6 +6,11 @@ $(function () {
         self.settingsViewModel = parameters[0];
 
         self.confirmed = ko.observable(false);
+        self.licenseValid = ko.observable(false);
+
+        /* --------------------------
+           ENGINE TEST
+        ---------------------------*/
 
         self.testConnection = function () {
             OctoPrint.simpleApiCommand("octogoat", "ping", {})
@@ -21,7 +26,9 @@ $(function () {
             alert("Resume clicked (stub).");
         };
 
-        self.licenseValid = ko.observable(false);
+        /* --------------------------
+           LICENSE VALIDATION
+        ---------------------------*/
 
         self.validateLicense = function () {
 
@@ -32,25 +39,24 @@ $(function () {
                 return;
             }
 
-            $.ajax({
-                url: "https://app.lazarus3dprint.com/validate",
-                method: "POST",
-                contentType: "application/json",
-                data: JSON.stringify({
-                    license_key: key
-                }),
-                success: function (response) {
-                    self.licenseValid(response.valid === true);
-                },
-                error: function () {
-                    self.licenseValid(false);
-                }
+            OctoPrint.simpleApiCommand("octogoat", "validate", {
+                license_key: key
+            })
+            .done(function (response) {
+                self.licenseValid(response.valid === true);
+            })
+            .fail(function () {
+                self.licenseValid(false);
             });
         };
 
         self.openCheckout = function () {
             window.open("https://lazarus3dprint.com/checkout", "_blank");
         };
+
+        /* --------------------------
+           LIFECYCLE
+        ---------------------------*/
 
         self.onBeforeBinding = function () {
             self.validateLicense();

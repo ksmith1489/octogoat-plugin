@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 
 import octoprint.plugin
+import requests
 from .resume_engine import build_resumed_gcode
 
 
@@ -58,14 +59,42 @@ class OctoGoatPlugin(
     def get_api_commands(self):
         return dict(
             ping=[],
+            validate=["license_key"],
         )
 
     def on_api_command(self, command, data):
+
         if command == "ping":
             return dict(
                 ok=True,
                 message="OctoGoat API reachable"
             )
+
+        if command == "validate":
+
+            license_key = data.get("license_key")
+            if not license_key:
+                return dict(valid=False)
+
+            engine_url = (self._settings.get(["engine_url"]) or "").rstrip("/")
+            validate_url = f"{engine_url}/validate"
+
+            try:
+                response = requests.post(
+                    validate_url,
+                    json={"license_key": license_key},
+                    timeout=10,
+                )
+
+                if response.status_code == 200:
+                    result = response.json()
+                    return dict(valid=result.get("valid", False))
+                else:
+                    return dict(valid=False)
+
+            except Exception as exc:
+                self._logger.error(f"License validation failed: {exc}")
+                return dict(valid=False)
 
 
 __plugin_name__ = "OctoGoat"
