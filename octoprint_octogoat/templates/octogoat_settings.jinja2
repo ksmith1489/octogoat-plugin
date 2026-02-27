@@ -1,6 +1,19 @@
 <div class="section">
   <h3>OctoGoat Settings</h3>
 
+  <!-- Firmware Toggle -->
+  <div class="control-group">
+    <label class="control-label">Firmware Type</label>
+    <div class="controls">
+      <select data-bind="value: settings.plugins.octogoat.firmware_type">
+        <option value="klipper">Klipper</option>
+        <option value="marlin">Marlin</option>
+      </select>
+      <p class="help-block">Select the firmware running on this printer.</p>
+    </div>
+  </div>
+
+  <!-- Engine URL -->
   <div class="control-group">
     <label class="control-label">Engine URL</label>
     <div class="controls">
@@ -11,6 +24,7 @@
     </div>
   </div>
 
+  <!-- License Key -->
   <div class="control-group">
     <label class="control-label">License Key</label>
     <div class="controls">
@@ -21,6 +35,46 @@
     </div>
   </div>
 
+  <!-- Park Position -->
+  <hr>
+
+  <h4>Park Position</h4>
+
+  <div class="control-group">
+    <label class="control-label">Park X</label>
+    <div class="controls">
+      <input type="number"
+             class="input-small"
+             step="0.01"
+             data-bind="value: settings.plugins.octogoat.park_x">
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label class="control-label">Park Y</label>
+    <div class="controls">
+      <input type="number"
+             class="input-small"
+             step="0.01"
+             data-bind="value: settings.plugins.octogoat.park_y">
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label class="control-label">Park Z</label>
+    <div class="controls">
+      <input type="number"
+             class="input-small"
+             step="0.01"
+             data-bind="value: settings.plugins.octogoat.park_z">
+    </div>
+  </div>
+
+  <p class="help-block">
+    Set the printer's known park position. This will be used to restore kinematic state before resume.
+  </p>
+
+  <!-- Free resumes -->
   <div class="control-group">
     <label class="control-label">Free resumes remaining</label>
     <div class="controls">
