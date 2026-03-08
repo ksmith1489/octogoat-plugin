@@ -1,43 +1,210 @@
-<div id="octogoat_tab_root" class="tab-pane">
-  <div class="container-fluid">
+<div id="tab_plugin_octogoat" class="tab-pane">
+<div class="container-fluid octogoat-ui">
 
-    <h2 style="margin-top:0;">OctoGoat</h2>
+<div class="octogoat-hero">
+<div class="octogoat-title-wrap">
 
-    <!-- NOT ACTIVATED -->
-    <div data-bind="visible: !licenseValid()">
-      <div class="alert alert-warning">
-        <b>Not activated.</b> Enter your license key in Settings → OctoGoat, or activate below.
-      </div>
+<div class="octogoat-title-logo">
+<img class="octogoat-goat-overlay"
+src="/plugin/octogoat/static/img/octogoat_icon.svg"
+alt="OctoGOAT">
+<h2 class="octogoat-title">OctoGOAT</h2>
+</div>
 
-      <button class="btn btn-success" data-bind="click: openCheckout">
-        Activate OctoGoat
-      </button>
+<div class="octogoat-tagline">
+Save time. Save money. Save that print.
+</div>
 
-      <button class="btn" style="margin-left:8px;" data-bind="click: validateLicense">
-        Re-check license
-      </button>
-    </div>
+</div>
+</div>
 
-    <!-- ACTIVATED -->
-    <div data-bind="visible: licenseValid">
-      <div class="alert alert-success">
-        <b>License verified.</b> OctoGoat is ready.
-      </div>
+<div class="octogoat-nav-row">
 
-      <button class="btn btn-primary" data-bind="click: testConnection">
-        Test Engine Connection
-      </button>
+<div class="octogoat-nav-left">
 
-      <button class="btn" style="margin-left:8px;" data-bind="click: validateLicense">
-        Re-check license
-      </button>
+<button class="btn octogoat-nav-btn"
+data-toggle="modal"
+data-target="#pricing-modal"
+title="placeholder">
+Pricing </button>
 
-      <hr>
+<button class="btn octogoat-nav-btn"
+data-toggle="modal"
+data-target="#howto-modal"
+title="placeholder">
+How To </button>
 
-      <button class="btn btn-warning" data-bind="click: resumePrint">
-        Resume Print (stub)
-      </button>
-    </div>
+<button class="btn octogoat-nav-btn"
+data-toggle="modal"
+data-target="#contact-modal"
+title="placeholder">
+Contact </button>
 
-  </div>
+</div>
+
+<div class="octogoat-nav-right">
+
+<span class="label label-success"
+data-bind="visible: licenseValid()">
+License Valid </span>
+
+<span class="label label-important"
+data-bind="visible: !licenseValid()">
+License Required </span>
+
+</div>
+
+</div>
+
+<div class="octogoat-card">
+
+<h4>Inputs</h4>
+
+<div class="row-fluid">
+
+<div class="span4">
+<label>Measured Print Height (mm)</label>
+
+<input type="number"
+step="0.1"
+class="input-block-level octogoat-input"
+placeholder="22.0"
+data-bind="value: measuredHeight"
+title="placeholder">
+
+</div>
+
+<div class="span4">
+<label>Quadrant</label>
+
+<select class="input-block-level octogoat-input"
+title="placeholder">
+
+<option>Left-Front</option>
+<option>Left-Back</option>
+<option>Right-Front</option>
+<option>Right-Back</option>
+
+</select>
+</div>
+
+<div class="span4">
+<label>Layer Height (mm)</label>
+
+<input type="number"
+step="0.01"
+class="input-block-level octogoat-input"
+placeholder="0.2"
+data-bind="value: layerHeight"
+title="placeholder">
+
+</div>
+
+</div>
+
+<button class="btn btn-large btn-block octogoat-action-btn"
+data-bind="click: buildResume, enable: licenseValid()"
+title="placeholder">
+
+RECONSTRUCT GCODE AND PROCEED TO CALIBRATE POSITION
+
+</button>
+
+</div>
+
+<div class="octogoat-card"
+data-bind="visible: resumeBuilt()">
+
+<h4>CALIBRATE MY POSITION</h4>
+
+<div class="octogoat-warning-box">
+
+*Warning! While possible to resume a failed print in seconds by simply clicking
+"Set Assumed Position" and skipping to Resume Now, it is not recommended!
+
+Is it awesome? Yes, but a safe and precise resume only takes a couple more minutes.
+
+If something doesn't look right you can always cut power and try again.
+
+If the print is still on the bed, with OctoGoat it's not dead.
+
+Be safe! Be kind! And know you are appreciated.
+
+OctoGoat powered by Lazarus. Patent pending. All rights reserved.
+
+</div>
+
+<div class="row-fluid">
+
+<div class="span4">
+
+<button class="btn btn-block octogoat-function-btn"
+data-bind="click: applyPark"
+title="placeholder">
+
+1 — ASSUMED POSITION
+
+</button>
+
+</div>
+
+<div class="span4">
+
+<button class="btn btn-block octogoat-function-btn"
+data-bind="click: goToDatum"
+title="placeholder">
+
+2 — MOVING ON TO PERFECTION
+
+</button>
+
+</div>
+
+<div class="span4">
+
+<button class="btn btn-block octogoat-function-btn"
+data-bind="click: lockDatum"
+title="placeholder">
+
+3 — POSITION CALIBRATION COMPLETE
+
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="octogoat-card">
+
+<h4>Resume GCode Preview</h4>
+
+<pre class="octogoat-preview"
+data-bind="visible: resumeBuilt(), text: previewText"></pre>
+
+</div>
+
+<div class="octogoat-card octogoat-resume-card">
+
+<label class="checkbox octogoat-checkbox">
+
+<input type="checkbox"
+data-bind="checked: motionAcknowledged">
+
+I acknowledge toolhead has been aligned, nozzle temp is correct and it is safe to move
+
+</label>
+
+<button class="btn btn-large octogoat-resume-btn"
+data-bind="enable: motionAcknowledged() && resumeBuilt(), click: resumeNow"
+title="placeholder">
+
+RESUME PRINT
+
+</button>
+
+</div>
+
+</div>
 </div>

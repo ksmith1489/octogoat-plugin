@@ -1,33 +1,64 @@
 <div class="section">
   <h3>OctoGoat Settings</h3>
 
+  <!-- Firmware -->
+  <div class="control-group">
+    <label class="control-label">Firmware Type</label>
+    <div class="controls">
+      <select data-bind="value: settings.plugins.octogoat.firmware_type">
+        <option value="klipper">Klipper</option>
+        <option value="marlin">Marlin</option>
+      </select>
+      <p class="help-block">
+        Select the firmware running on this printer.
+      </p>
+    </div>
+  </div>
+
+  <!-- Engine URL -->
   <div class="control-group">
     <label class="control-label">Engine URL</label>
     <div class="controls">
       <input type="text"
              class="input-block-level"
              data-bind="value: settings.plugins.octogoat.engine_url">
-      <p class="help-block">Where the Lazarus engine is hosted (default is cloud).</p>
+      <p class="help-block">
+        License authority endpoint (cloud by default).
+      </p>
     </div>
   </div>
 
-  <div class="control-group">
-    <label class="control-label">License Key</label>
-    <div class="controls">
-      <input type="text"
-             class="input-block-level"
-             data-bind="value: settings.plugins.octogoat.api_key">
-      <p class="help-block">Paste your OctoGoat license key here.</p>
-    </div>
-  </div>
+  <hr>
+
+  <h4>Park Position</h4>
 
   <div class="control-group">
-    <label class="control-label">Free resumes remaining</label>
+    <label class="control-label">Park X</label>
     <div class="controls">
       <input type="number"
              class="input-small"
-             min="0"
-             data-bind="value: settings.plugins.octogoat.free_resumes_remaining">
+             step="0.01"
+             data-bind="value: settings.plugins.octogoat.park_x">
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label class="control-label">Park Y</label>
+    <div class="controls">
+      <input type="number"
+             class="input-small"
+             step="0.01"
+             data-bind="value: settings.plugins.octogoat.park_y">
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label class="control-label">Park Z Offset</label>
+    <div class="controls">
+      <input type="number"
+             class="input-small"
+             step="0.01"
+             data-bind="value: settings.plugins.octogoat.park_z_offset">
     </div>
   </div>
 </div>
