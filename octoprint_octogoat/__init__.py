@@ -72,43 +72,55 @@ class OctoGoatPlugin(
         )
 
     def on_api_command(self, command, data):
+        
+    if command == "validate":
+        install_id = self._settings.get(["install_id"])
+        if not install_id:
+            self._logger.warning("Missing install_id during validation")
+            return dict(valid=False, error="Missing install_id")
+            
+        last_validated = int(self._settings.get(["last_validated"]) or 0)
+        engine_url = (self._settings.get(["engine_url"]) or "").rstrip("/")
+        validate_url = f"{engine_url}/validate"
+        now = int(time.time())
 
+        if last_validated and (now - last_validated) < WEEK_SECONDS:
+            self._logger.info("Using cached validation result")
+            return dict(valid=True)
+
+        try:
+            self._logger.info(f"Validating license for install_id: {install_id}")
+            r = requests.post(
+                validate_url,
+                json={"install_id": install_id},
+                timeout=5,
+            )
+
+            if r.status_code != 200:
+                self._logger.warning(f"Validation failed with status: {r.status_code}")
+                return dict(valid=False)
+
+            payload = r.json()
+            is_valid = payload.get("valid") is True
+
+            if is_valid:
+                self._logger.info("License validated successfully")
+                self._settings.set(["last_validated"], now)
+                self._settings.save()
+            else:
+                self._logger.warning("License validation returned invalid")
+
+            return dict(valid=is_valid)
+
+        except Exception as e:
+            self._logger.error(f"License validation exception: {str(e)}")
+            if last_validated and (now - last_validated) < WEEK_SECONDS:
+                self._logger.info("Using cached validation as fallback after error")
+                return dict(valid=True)
+            return dict(valid=False)
+        
         if command == "ping":
             return dict(ok=True)
-
-        if command == "validate":
-            install_id = self._settings.get(["install_id"])
-            last_validated = int(self._settings.get(["last_validated"]) or 0)
-            engine_url = (self._settings.get(["engine_url"]) or "").rstrip("/")
-            validate_url = f"{engine_url}/validate"
-            now = int(time.time())
-
-            if last_validated and (now - last_validated) < WEEK_SECONDS:
-                return dict(valid=True)
-
-            try:
-                r = requests.post(
-                    validate_url,
-                    json={"install_id": install_id},
-                    timeout=5,
-                )
-
-                if r.status_code != 200:
-                    return dict(valid=False)
-
-                payload = r.json()
-                is_valid = payload.get("valid") is True
-
-                if is_valid:
-                    self._settings.set(["last_validated"], now)
-                    self._settings.save()
-
-                return dict(valid=is_valid)
-
-            except Exception:
-                if last_validated and (now - last_validated) < WEEK_SECONDS:
-                    return dict(valid=True)
-                return dict(valid=False)
 
         if command == "build_resume":
             try:

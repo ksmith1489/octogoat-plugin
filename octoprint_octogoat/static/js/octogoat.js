@@ -1,4 +1,5 @@
 $(function () {
+
     function OctoGoatViewModel(parameters) {
         var self = this;
 
@@ -10,7 +11,6 @@ $(function () {
 
         self.measuredHeight = ko.observable("");
         self.layerHeight = ko.observable("");
-        self.quadrant = ko.observable("front-left");
 
         self.resumeBuilt = ko.observable(false);
 
@@ -22,11 +22,9 @@ $(function () {
         self.parkX = ko.observable("");
         self.parkY = ko.observable("");
         self.parkZ = ko.observable("");
-
+       
         self.previewText = ko.observable("");
         self.motionAcknowledged = ko.observable(false);
-
-        self.pricingScriptLoaded = false;
 
         function notify(title, text, type) {
             new PNotify({
@@ -39,26 +37,6 @@ $(function () {
         function api(cmd, payload) {
             return OctoPrint.simpleApiCommand("octogoat", cmd, payload || {});
         }
-
-        self.ensurePricingScript = function () {
-            if (self.pricingScriptLoaded || document.querySelector('script[src="https://js.stripe.com/v3/pricing-table.js"]')) {
-                self.pricingScriptLoaded = true;
-                return;
-            }
-
-            var script = document.createElement("script");
-            script.src = "https://js.stripe.com/v3/pricing-table.js";
-            script.async = true;
-            script.onload = function () {
-                self.pricingScriptLoaded = true;
-            };
-            document.body.appendChild(script);
-        };
-
-        self.openPricingModal = function () {
-            self.ensurePricingScript();
-            $("#pricing-modal").modal("show");
-        };
 
         self.validateInputs = function () {
             var mph = parseFloat(self.measuredHeight());
@@ -74,11 +52,6 @@ $(function () {
                 return false;
             }
 
-            if (!self.quadrant()) {
-                notify("Input Error", "Quadrant selection required", "error");
-                return false;
-            }
-
             return true;
         };
 
@@ -87,49 +60,50 @@ $(function () {
 
             api("build_resume", {
                 measured_height: parseFloat(self.measuredHeight()),
-                layer_height: parseFloat(self.layerHeight()),
-                quadrant: self.quadrant()
+                layer_height: parseFloat(self.layerHeight())
             })
-                .done(function (resp) {
-                    if (!resp || !resp.ok) {
-                        notify("Error", resp && resp.error ? resp.error : "Resume build failed", "error");
-                        return;
-                    }
+            .done(function (resp) {
+                if (!resp || !resp.ok) {
+                    notify("Error", resp && resp.error ? resp.error : "Resume build failed", "error");
+                    return;
+                }
 
-                    self.resumeZ(resp.resume_z || "");
+                self.resumeZ(resp.resume_z || "");
 
-                    if (resp.datum) {
-                        self.datumX(resp.datum.x != null ? resp.datum.x : "");
-                        self.datumY(resp.datum.y != null ? resp.datum.y : "");
-                        self.datumZ(resp.datum.z != null ? resp.datum.z : "");
-                        self.safeDatumZ(resp.datum.z != null ? (resp.datum.z + 10) : "");
-                    }
+                if (resp.datum) {
+                    self.datumX(resp.datum.x != null ? resp.datum.x : "");
+                    self.datumY(resp.datum.y != null ? resp.datum.y : "");
+                    self.datumZ(resp.datum.z != null ? resp.datum.z : "");
+                  
+                    self.safeDatumZ(resp.datum.z + 10);
+                }
+                
 
-                    if (resp.park) {
-                        self.parkX(resp.park.x != null ? resp.park.x : "");
-                        self.parkY(resp.park.y != null ? resp.park.y : "");
-                        self.parkZ(resp.park.z != null ? resp.park.z : "");
-                    }
+                if (resp.park) {
+                    self.parkX(resp.park.x != null ? resp.park.x : "");
+                    self.parkY(resp.park.y != null ? resp.park.y : "");
+                    self.parkZ(resp.park.z != null ? resp.park.z : "");
+                }
 
-                    self.previewText(resp.preview ? resp.preview.join("\n") : "");
-                    self.motionAcknowledged(false);
-                    self.resumeBuilt(true);
+                self.previewText(resp.preview ? resp.preview.join("\n") : "");
+                self.motionAcknowledged(false);
+                self.resumeBuilt(true);
 
-                    notify("Alignment Ready", "Move printer to quadrant corner then press Get Set.", "notice");
-                })
-                .fail(function () {
-                    notify("Error", "API request failed", "error");
-                });
+                notify("Alignment Ready", "Move printer to quadrant corner then press Get Set.", "notice");
+            })
+            .fail(function () {
+                notify("Error", "API request failed", "error");
+            });
         };
 
         self.applyPark = function () {
             api("apply_park")
-                .done(function () {
-                    notify("Park Position Set", "Toolhead reference position applied.", "success");
-                })
-                .fail(function () {
-                    notify("Error", "Park command failed", "error");
-                });
+            .done(function () {
+                notify("Park Position Set", "Toolhead reference position applied.", "success");
+            })
+            .fail(function () {
+                notify("Error", "Park command failed", "error");
+            });
         };
 
         self.goToDatum = function () {
@@ -138,12 +112,12 @@ $(function () {
                 y: self.datumY(),
                 z: self.datumZ()
             })
-                .done(function () {
-                    notify("Move Complete", "Toolhead moved to alignment position.", "success");
-                })
-                .fail(function () {
-                    notify("Error", "Move failed", "error");
-                });
+            .done(function () {
+                notify("Move Complete", "Toolhead moved to alignment position.", "success");
+            })
+            .fail(function () {
+                notify("Error", "Move failed", "error");
+            });
         };
 
         self.lockDatum = function () {
@@ -152,12 +126,12 @@ $(function () {
                 y: self.datumY(),
                 z: self.datumZ()
             })
-                .done(function () {
-                    notify("Alignment Locked", "True alignment point saved.", "success");
-                })
-                .fail(function () {
-                    notify("Error", "Lock failed", "error");
-                });
+            .done(function () {
+                notify("Alignment Locked", "True alignment point saved.", "success");
+            })
+            .fail(function () {
+                notify("Error", "Lock failed", "error");
+            });
         };
 
         self.resumeNow = function () {
@@ -167,67 +141,80 @@ $(function () {
             }
 
             api("execute_resume")
-                .done(function (resp) {
-                    if (!resp || resp.ok !== true) {
-                        notify("Error", resp && resp.error ? resp.error : "Resume failed", "error");
-                        return;
-                    }
-                    notify("OctoGOAT", "Resume sequence started", "success");
-                })
-                .fail(function () {
-                    notify("Error", "Resume failed", "error");
-                });
-        };
-
-        self.validateLicense = function () {
-            api("validate")
-                .done(function (resp) {
-                    self.licenseValid(resp && resp.valid === true);
-                })
-                .fail(function () {
-                    self.licenseValid(false);
-                });
+            .done(function (resp) {
+                if (!resp || resp.ok !== true) {
+                    notify("Error", resp && resp.error ? resp.error : "Resume failed", "error");
+                    return;
+                }
+                notify("OctoGOAT", "Resume sequence started", "success");
+            })
+            .fail(function () {
+                notify("Error", "Resume failed", "error");
+            });
         };
 
         self.onBeforeBinding = function () {
-            self.ensurePricingScript();
+            var script = document.createElement("script");
+            script.src = "https://js.stripe.com/v3/pricing-table.js";
+            script.async = true;
+            document.body.appendChild(script);
         };
 
-        $(document).on("shown", "#pricing-modal", function () {
+        $("#pricing-modal").on("shown.bs.modal", function () {
             var container = document.getElementById("pricing-table-container");
             if (!container) return;
 
             if (container.children.length === 0) {
-                var installId = "";
-                try {
-                    installId = self.settingsViewModel.settings.plugins.octogoat.install_id() || "";
-                } catch (e) {
-                    installId = "";
-                }
+                var installId = self.settingsViewModel.settings.plugins.octogoat.install_id();
 
                 var table = document.createElement("stripe-pricing-table");
                 table.setAttribute("pricing-table-id", "prctbl_1T6RDmE52GVAutfiaLKmlSue");
                 table.setAttribute("publishable-key", "pk_live_51Se4ekE52GVAutfixtDzM2jB9edEZLVHIGm8EwPQ6IxZakas76Zu8xap83euJ56hnArtqEKPqS2yxwATen3yLcgn000er82jFv");
-
-                if (installId) {
-                    table.setAttribute("client-reference-id", installId);
-                }
+                table.setAttribute("client-reference-id", installId);
 
                 container.appendChild(table);
             }
         });
 
+        self.validateLicense = function () {
+            // Make sure we have an install_id before validating
+            var installId;
+            try {
+                installId = self.settingsViewModel.settings.plugins.octogoat.install_id();
+            } catch (e) {
+                console.error("Failed to get install_id:", e);
+                self.licenseValid(false);
+                return;
+            }
+            
+            if (!installId) {
+                console.error("No install_id available");
+                self.licenseValid(false);
+                return;
+            }
+            
+            api("validate")
+                .done(function (resp) {
+                    console.log("License validation response:", resp);
+                    self.licenseValid(resp && resp.valid === true);
+                })
+                .fail(function (xhr) {
+                    console.error("License validation failed:", xhr);
+                    self.licenseValid(false);
+                });
+        };
+
         self.onStartupComplete = function () {
             self.validateLicense();
         };
 
+        console.log("OctoGOAT ViewModel Loaded");
+        
         self.onTabChange = function (current) {
             if (current === "#tab_plugin_octogoat") {
                 self.validateLicense();
             }
         };
-
-        console.log("OctoGOAT ViewModel Loaded");
     }
 
     OCTOPRINT_VIEWMODELS.push({
@@ -235,4 +222,5 @@ $(function () {
         dependencies: ["settingsViewModel"],
         elements: ["#tab_plugin_octogoat"]
     });
+
 });
