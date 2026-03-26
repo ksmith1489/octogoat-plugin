@@ -1,0 +1,403 @@
+/* ===================================
+   OctoGOAT UI Styling
+=================================== */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&display=swap');
+.octogoat-ui {
+    background: #050505;
+    color: #ff8a1f;
+    padding: 18px;
+    margin: 0;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 100%;
+}
+
+.octogoat-ui .row-fluid {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.octogoat-ui h4,
+.octogoat-ui label,
+.octogoat-ui b,
+.octogoat-ui .well,
+.octogoat-ui .checkbox,
+.octogoat-ui .label,
+.octogoat-ui .btn,
+.octogoat-ui select,
+.octogoat-ui input,
+.octogoat-ui pre,
+.octogoat-ui span,
+.octogoat-ui div {
+    box-sizing: border-box;
+}
+
+.octogoat-hero {
+    margin: 0 0 18px 0;
+    padding: 10px 0 14px 0;
+    border-bottom: 1px solid #1c1c1c;
+}
+
+.octogoat-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.octogoat-goatmark {
+    position: relative;
+    width: 88px;
+    height: 88px;
+    flex: 0 0 auto;
+}
+
+.octogoat-goatmark img {
+    width: 88px;
+    height: 88px;
+    display: block;
+    border-radius: 50%;
+    box-shadow: 0 0 18px rgba(255, 138, 31, 0.25);
+}
+
+.octogoat-speech {
+    position: absolute;
+    left: 84px;
+    top: -4px;
+    min-width: 240px;
+    max-width: 320px;
+    background: #ffffff;
+    color: #111111;
+    border: 3px solid #111111;
+    border-radius: 18px;
+    padding: 10px 14px;
+    font-weight: 700;
+    font-size: 13px;
+    line-height: 1.2;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    z-index: 5;
+}
+
+.octogoat-speech:before {
+    content: "";
+    position: absolute;
+    left: -14px;
+    top: 28px;
+    border-width: 10px 14px 10px 0;
+    border-style: solid;
+    border-color: transparent #111111 transparent transparent;
+}
+
+.octogoat-speech:after {
+    content: "";
+    position: absolute;
+    left: -10px;
+    top: 30px;
+    border-width: 8px 12px 8px 0;
+    border-style: solid;
+    border-color: transparent #ffffff transparent transparent;
+}
+
+.octogoat-title-stack {
+    flex: 1 1 auto;
+    min-width: 280px;
+}
+
+.octogoat-title {
+    margin: 0;
+    color: #ff8a1f;
+    font-size: 56px;
+    line-height: 1;
+    letter-spacing: 2px;
+    font-weight: 900;
+    text-transform: uppercase;
+    text-shadow:
+        0 0 8px rgba(255, 138, 31, 0.25),
+        0 0 18px rgba(255, 138, 31, 0.20);
+    font-family:  "Montserrat", "Segoe UI", Arial, sans-serif;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.octogoat-tagline {
+    margin-top: 8px;
+    color: #ffb15c;
+    font-size: 20px;
+    font-weight: 700;
+    font-family: Impact, Haettenschweiler, "Arial Black", sans-serif;
+    letter-spacing: 0.5px;
+}
+
+.octogoat-nav-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin: 0 0 18px 0;
+    padding: 10px 0 16px 0;
+    border-bottom: 1px solid #1c1c1c;
+}
+
+.octogoat-nav-left {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.octogoat-nav-right {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.octogoat-nav-btn {
+    background: #1dd35d !important;
+    border: 1px solid #11a546 !important;
+    color: #ff8a1f !important;
+    font-weight: 900;
+    text-transform: uppercase;
+    border-radius: 8px;
+    padding: 10px 18px;
+    box-shadow: none;
+    text-shadow: none;
+}
+
+.octogoat-nav-btn:hover,
+.octogoat-nav-btn:focus {
+    background: #28e16a !important;
+    color: #ff9d45 !important;
+}
+
+.octogoat-ui .label-success {
+    background: #1dd35d;
+    color: #111111;
+    font-weight: 800;
+}
+
+.octogoat-ui .label-important {
+    background: #d42d2d;
+    color: #ffffff;
+    font-weight: 800;
+}
+
+.octogoat-card {
+    background: #0e0e0e;
+    border: 1px solid #1c1c1c;
+    border-radius: 12px;
+    padding: 18px;
+    margin: 0 0 18px 0;
+    width: 100%;
+}
+
+.octogoat-card h4 {
+    margin: 0 0 14px 0;
+    color: #ff8a1f;
+    font-size: 24px;
+    font-weight: 900;
+    text-transform: uppercase;
+    font-family: Impact, Haettenschweiler, "Arial Black", sans-serif;
+    letter-spacing: 1px;
+}
+
+.octogoat-ui label {
+    color: #9dff9d;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.octogoat-input,
+.octogoat-ui select,
+.octogoat-ui input[type="number"],
+.octogoat-ui input[type="text"] {
+    background: #ff8a1f !important;
+    color: #a6ffb2 !important;
+    border: 1px solid #d76f0e !important;
+    border-radius: 8px !important;
+    min-height: 42px;
+    font-weight: 700;
+    box-shadow: none !important;
+}
+
+.octogoat-input::placeholder {
+    color: #d7ffd7;
+}
+
+.octogoat-file-well,
+.octogoat-coord-box {
+    background: #ff8a1f;
+    color: #a6ffb2;
+    border: 1px solid #d76f0e;
+    border-radius: 10px;
+    min-height: 110px;
+    padding: 12px 14px;
+    font-weight: 800;
+    box-shadow: none;
+}
+
+.octogoat-coord-title {
+    color: #111111;
+    font-size: 18px;
+    font-weight: 900;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+.octogoat-action-btn {
+    margin-top: 18px;
+    background: #17c653 !important;
+    border: 1px solid #11983f !important;
+    color: #ff8a1f !important;
+    font-size: 24px;
+    font-weight: 900;
+    text-transform: uppercase;
+    padding: 16px 20px;
+    border-radius: 10px;
+    text-shadow: none;
+}
+
+.octogoat-action-btn:hover,
+.octogoat-action-btn:focus {
+    background: #20d85f !important;
+    color: #ff9d45 !important;
+}
+
+.octogoat-function-btn {
+    margin-top: 12px;
+    background: #17c653 !important;
+    border: 1px solid #11983f !important;
+    color: #ff8a1f !important;
+    font-size: 18px;
+    font-weight: 900;
+    text-transform: uppercase;
+    padding: 12px 14px;
+    border-radius: 10px;
+    text-shadow: none;
+}
+
+.octogoat-function-btn:hover,
+.octogoat-function-btn:focus {
+    background: #20d85f !important;
+    color: #ff9d45 !important;
+}
+
+.octogoat-preview {
+    background: #35204f !important;
+    color: #f4f1ff !important;
+    border: 1px solid #4e2d72;
+    border-radius: 10px;
+    padding: 16px;
+    max-height: 350px;
+    overflow: auto;
+    font-size: 13px;
+    line-height: 1.4;
+    font-family: Consolas, "Courier New", monospace;
+    margin: 0;
+    box-shadow: inset 0 0 18px rgba(0,0,0,0.22);
+}
+
+.octogoat-resume-card {
+    text-align: center;
+}
+
+.octogoat-checkbox {
+    color: #e2f8ff;
+    font-weight: 700;
+    margin-bottom: 18px;
+    display: inline-block;
+}
+
+.octogoat-resume-btn {
+    background: #39b7b8 !important;
+    border: 1px solid #23989a !important;
+    color: #ffffff !important;
+    font-size: 26px;
+    font-weight: 900;
+    text-transform: uppercase;
+    padding: 14px 30px;
+    border-radius: 10px;
+    text-shadow: none;
+}
+
+.octogoat-resume-btn:hover,
+.octogoat-resume-btn:focus {
+    background: #46c8ca !important;
+}
+
+.octogoat-ui button[disabled],
+.octogoat-ui .btn[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.octogoat-ui hr,
+.octogoat-workflow,
+.octogoat-welcome,
+.alert.alert-info {
+    display: none !important;
+}
+
+@media (max-width: 900px) {
+    .octogoat-title {
+        font-size: 40px;
+    }
+
+    .octogoat-tagline {
+        font-size: 16px;
+    }
+
+    .octogoat-speech {
+        position: static;
+        margin-top: 10px;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .octogoat-speech:before,
+    .octogoat-speech:after {
+        display: none;
+    }
+
+    .octogoat-ui .row-fluid [class*="span"] {
+        width: 100%;
+        margin-left: 0;
+        margin-bottom: 14px;
+    }
+}
+    .octogoat-action-btn{
+        white-space:normal;
+        line-height:1.2;
+     }
+
+    .octogoat-nav-btn,
+    .octogoat-function-btn,
+    .octogoat-action-btn,
+    .octogoat-resume-btn{
+     color:#000 !important;
+     }
+
+    .octogoat-warning-box{
+        background:#ffffff;
+        color:#d60000;
+        font-weight:800;
+        padding:14px;
+        margin:18px 0;
+        border-radius:8px;
+        text-align:center;
+        font-size:14px;
+        border:2px solid #d60000;
+        }
+    .octogoat-title-logo{
+        position:relative;
+        display:inline-block;
+    }
+
+    .octogoat-goat-overlay{
+        position:absolute;
+        left:-6px;
+        top:-10px;
+        width:52px;
+        height:52px;
+        pointer-events:none;
+    }
+
