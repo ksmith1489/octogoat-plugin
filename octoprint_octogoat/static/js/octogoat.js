@@ -20,7 +20,9 @@ $(function () {
         self.parkY = ko.observable("");
         self.parkZ = ko.observable("");
         self.previewText = ko.observable("");
+        self.resumeFileName = ko.observable("");
         self.motionAcknowledged = ko.observable(false);
+        self.assumedPositionApplied = ko.observable(false);
 
         self.availableFiles = ko.observableArray([]);
         self.selectedServerFilePath = ko.observable("");
@@ -31,6 +33,14 @@ $(function () {
         self.isDraggingFile = ko.observable(false);
 
         self.userSelectedFile = false;
+
+        self.canResume = ko.computed(function () {
+            return self.resumeBuilt() && self.motionAcknowledged() && self.assumedPositionApplied();
+        });
+
+        self.canDownloadResume = ko.computed(function () {
+            return self.resumeBuilt() && !!self.resumeFileName();
+        });
 
         function notify(title, text, type) {
             new PNotify({
@@ -44,6 +54,30 @@ $(function () {
             return OctoPrint.simpleApiCommand("octogoat", cmd, payload || {});
         }
 
+        function getApiBaseUrl() {
+            return window.API_BASEURL || ((window.BASEURL || "/") + "api/");
+        }
+
+        function getFilesApiUrl() {
+            return getApiBaseUrl() + "files/local?recursive=true";
+        }
+
+        function getResumeDownloadUrl() {
+            return getApiBaseUrl() + "plugin/octogoat?download_resume=1&_ts=" + Date.now();
+        }
+
+        function getAjaxErrorMessage(xhr, fallbackText) {
+            if (xhr && xhr.responseJSON && xhr.responseJSON.error) {
+                return xhr.responseJSON.error;
+            }
+
+            if (xhr && xhr.responseText) {
+                return xhr.responseText;
+            }
+
+            return fallbackText;
+        }
+
         function resetResumeState() {
             self.resumeBuilt(false);
             self.resumeZ("");
@@ -51,7 +85,9 @@ $(function () {
             self.datumY("");
             self.datumZ("");
             self.previewText("");
+            self.resumeFileName("");
             self.motionAcknowledged(false);
+            self.assumedPositionApplied(false);
         }
 
         function isSupportedGcodeName(name) {
@@ -119,11 +155,13 @@ $(function () {
         function findAvailableFileByPath(path) {
             var files = self.availableFiles();
             var index;
+
             for (index = 0; index < files.length; index += 1) {
                 if (files[index].path === path) {
                     return files[index];
                 }
             }
+
             return null;
         }
 
@@ -153,20 +191,20 @@ $(function () {
             return null;
         }
 
-        function flattenFileEntries(entries, bucket) {
+        function flattenFileEntries(entries, bucket, parentPath) {
             var index;
             var entry;
             var path;
 
             for (index = 0; index < (entries || []).length; index += 1) {
                 entry = entries[index];
+                path = entry.path || (parentPath ? parentPath + "/" + entry.name : entry.name);
 
                 if (entry.type === "folder" && entry.children) {
-                    flattenFileEntries(entry.children, bucket);
+                    flattenFileEntries(entry.children, bucket, path);
                     continue;
                 }
 
-                path = entry.path || OctoPrint.files.pathForEntry(entry);
                 if (!path || !isSupportedGcodeName(path)) {
                     continue;
                 }
@@ -243,10 +281,22 @@ $(function () {
         }
 
         self.loadAvailableFiles = function () {
-            OctoPrint.files.listForLocation("local", true)
+            var loader = null;
+
+            if (OctoPrint.files && typeof OctoPrint.files.listForLocation === "function") {
+                loader = OctoPrint.files.listForLocation("local", true);
+            } else {
+                loader = $.ajax({
+                    url: getFilesApiUrl(),
+                    type: "GET",
+                    dataType: "json"
+                });
+            }
+
+            loader
                 .done(function (response) {
                     var files = [];
-                    flattenFileEntries(response && response.files ? response.files : [], files);
+                    flattenFileEntries(response && response.files ? response.files : [], files, "");
                     files.sort(function (a, b) {
                         return a.label.localeCompare(b.label);
                     });
@@ -308,8 +358,8 @@ $(function () {
 
                     updateParkFields(resp.park);
                 })
-                .fail(function () {
-                    notify("Error", "Assumed position save failed", "error");
+                .fail(function (xhr) {
+                    notify("Error", getAjaxErrorMessage(xhr, "Assumed position save failed"), "error");
                 });
         };
 
@@ -356,6 +406,7 @@ $(function () {
                     }
 
                     self.resumeZ(resp.resume_z || "");
+                    self.assumedPositionApplied(false);
 
                     if (resp.datum) {
                         self.datumX(resp.datum.x != null ? resp.datum.x : "");
@@ -371,27 +422,35 @@ $(function () {
                         self.selectedFileLabel(resp.file.name);
                     }
 
+                    self.resumeFileName(resp.resume_file_name || "octogoat_resume.gcode");
                     self.previewText(resp.preview ? resp.preview.join("\n") : "");
                     self.motionAcknowledged(false);
                     self.resumeBuilt(true);
 
                     notify("Alignment Ready", "Move printer to the selected side reference point and continue calibration.", "notice");
                 })
-                .fail(function () {
-                    notify("Error", "API request failed", "error");
+                .fail(function (xhr) {
+                    notify("Error", getAjaxErrorMessage(xhr, "API request failed"), "error");
                 });
         };
 
         self.applyPark = function () {
             api("apply_park")
                 .done(function (resp) {
-                    if (resp && resp.park) {
+                    if (!resp || resp.ok !== true) {
+                        notify("Error", resp && resp.error ? resp.error : "Park command failed", "error");
+                        return;
+                    }
+
+                    if (resp.park) {
                         updateParkFields(resp.park);
                     }
+
+                    self.assumedPositionApplied(true);
                     notify("Assumed Position Set", "Toolhead reference position applied.", "success");
                 })
-                .fail(function () {
-                    notify("Error", "Park command failed", "error");
+                .fail(function (xhr) {
+                    notify("Error", getAjaxErrorMessage(xhr, "Park command failed"), "error");
                 });
         };
 
@@ -401,11 +460,16 @@ $(function () {
                 y: self.datumY(),
                 z: self.datumZ()
             })
-                .done(function () {
+                .done(function (resp) {
+                    if (!resp || resp.ok !== true) {
+                        notify("Error", resp && resp.error ? resp.error : "Move failed", "error");
+                        return;
+                    }
+
                     notify("Move Complete", "Toolhead moved to the alignment datum.", "success");
                 })
-                .fail(function () {
-                    notify("Error", "Move failed", "error");
+                .fail(function (xhr) {
+                    notify("Error", getAjaxErrorMessage(xhr, "Move failed"), "error");
                 });
         };
 
@@ -415,15 +479,42 @@ $(function () {
                 y: self.datumY(),
                 z: self.datumZ()
             })
-                .done(function () {
-                    notify("Alignment Locked", "True alignment point saved.", "success");
+                .done(function (resp) {
+                    if (!resp || resp.ok !== true) {
+                        notify("Error", resp && resp.error ? resp.error : "Lock failed", "error");
+                        return;
+                    }
+
+                    notify("Alignment Locked", resp.message || "it is now safe to set nozzle temp", "success");
                 })
-                .fail(function () {
-                    notify("Error", "Lock failed", "error");
+                .fail(function (xhr) {
+                    notify("Error", getAjaxErrorMessage(xhr, "Lock failed"), "error");
                 });
         };
 
+        self.downloadResume = function () {
+            var link;
+
+            if (!self.canDownloadResume()) {
+                notify("Resume File", "Build the resume GCODE first.", "notice");
+                return;
+            }
+
+            link = document.createElement("a");
+            link.href = getResumeDownloadUrl();
+            link.download = self.resumeFileName() || "octogoat_resume.gcode";
+            link.style.display = "none";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
         self.resumeNow = function () {
+            if (!self.assumedPositionApplied()) {
+                notify("Safety", "You must set the assumed position before resuming.", "notice");
+                return;
+            }
+
             if (!self.motionAcknowledged()) {
                 notify("Safety", "You must acknowledge printer motion", "notice");
                 return;
@@ -435,10 +526,11 @@ $(function () {
                         notify("Error", resp && resp.error ? resp.error : "Resume failed", "error");
                         return;
                     }
+
                     notify("OctoGOAT", "Resume sequence started", "success");
                 })
-                .fail(function () {
-                    notify("Error", "Resume failed", "error");
+                .fail(function (xhr) {
+                    notify("Error", getAjaxErrorMessage(xhr, "Resume failed"), "error");
                 });
         };
 
@@ -528,12 +620,15 @@ $(function () {
 
         $("#pricing-modal").on("shown.bs.modal", function () {
             var container = document.getElementById("pricing-table-container");
+            var installId;
+            var table;
+
             if (!container || container.children.length !== 0) {
                 return;
             }
 
-            var installId = self.settingsViewModel.settings.plugins.octogoat.install_id();
-            var table = document.createElement("stripe-pricing-table");
+            installId = self.settingsViewModel.settings.plugins.octogoat.install_id();
+            table = document.createElement("stripe-pricing-table");
 
             table.setAttribute("pricing-table-id", "prctbl_1T6RDmE52GVAutfiaLKmlSue");
             table.setAttribute("publishable-key", "pk_live_51Se4ekE52GVAutfixtDzM2jB9edEZLVHIGm8EwPQ6IxZakas76Zu8xap83euJ56hnArtqEKPqS2yxwATen3yLcgn000er82jFv");

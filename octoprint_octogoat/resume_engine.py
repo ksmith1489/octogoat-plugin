@@ -13,6 +13,12 @@ LAYER_HEIGHT_PATTERNS = (
     re.compile(r"(?i)^\s*;\s*layer[_ ]height\s*[:=]\s*([-+]?\d*\.?\d+)\s*$"),
     re.compile(r"(?i)^\s*;\s*layerheight\s*[:=]\s*([-+]?\d*\.?\d+)\s*$"),
 )
+INITIAL_LAYER_HEIGHT_PATTERNS = (
+    re.compile(r"(?i)^\s*;\s*initial[_ ]layer[_ ]height\s*[:=]\s*([-+]?\d*\.?\d+\s*%?)\s*$"),
+    re.compile(r"(?i)^\s*;\s*first[_ ]layer[_ ]height\s*[:=]\s*([-+]?\d*\.?\d+\s*%?)\s*$"),
+    re.compile(r"(?i)^\s*;\s*initial layer height\s*[:=]\s*([-+]?\d*\.?\d+\s*%?)\s*$"),
+    re.compile(r"(?i)^\s*;\s*first layer height\s*[:=]\s*([-+]?\d*\.?\d+\s*%?)\s*$"),
+)
 
 
 @dataclass
@@ -150,6 +156,65 @@ def infer_layer_height(original_gcode_text: str) -> float:
     return float(best_diff)
 
 
+def _parse_height_value(raw_value: str, *, layer_height_mm: float) -> Optional[float]:
+    value = (raw_value or "").strip()
+    if not value:
+        return None
+
+    if value.endswith("%"):
+        try:
+            return layer_height_mm * (float(value[:-1].strip()) / 100.0)
+        except Exception:
+            return None
+
+    try:
+        return float(value)
+    except Exception:
+        return None
+
+
+def infer_initial_layer_height(original_gcode_text: str, *, layer_height_mm: float) -> float:
+    for raw in io.StringIO(original_gcode_text):
+        stripped = raw.strip()
+        for pattern in INITIAL_LAYER_HEIGHT_PATTERNS:
+            match = pattern.match(stripped)
+            if not match:
+                continue
+            parsed = _parse_height_value(match.group(1), layer_height_mm=layer_height_mm)
+            if parsed is not None and parsed > 0:
+                return float(parsed)
+
+    layer_z_values = _collect_layer_z_values(original_gcode_text, printing_only=True)
+    if not layer_z_values:
+        layer_z_values = _collect_layer_z_values(original_gcode_text, printing_only=False)
+    if layer_z_values:
+        return float(layer_z_values[0])
+
+    return float(layer_height_mm)
+
+
+def infer_true_print_height(
+    print_height_mm: float,
+    *,
+    layer_height_mm: float,
+    initial_layer_height_mm: float,
+) -> Dict[str, float]:
+    layer_adjustment = float(initial_layer_height_mm) - float(layer_height_mm)
+    normalized_height = max(0.0, float(print_height_mm) - layer_adjustment)
+    rounded_normalized_height = infer_resume_z(
+        print_height_mm=normalized_height,
+        layer_height_mm=layer_height_mm,
+    )
+    true_print_height = max(0.0, rounded_normalized_height + layer_adjustment)
+
+    return dict(
+        layer_adjustment=round(layer_adjustment, 5),
+        normalized_height=round(normalized_height, 5),
+        rounded_normalized_height=round(rounded_normalized_height, 5),
+        true_print_height=round(true_print_height, 5),
+    )
+
+
 def _collect_layer_z_values(original_gcode_text: str, *, printing_only: bool) -> List[float]:
     current_z: Optional[float] = None
     seen = set()
@@ -275,7 +340,7 @@ def build_resumed_gcode(
     z_match_tol: float = DEFAULT_Z_MATCH_TOL,
     z_floor_tol: float = DEFAULT_Z_FLOOR_TOL,
     inject_last_motion_feedrate: bool = True,
-    preview_lines: int = 220,
+    preview_lines: int = 50,
 ) -> Dict[str, Any]:
     """
     Pure engine: returns resumed_text + preview + metadata.
@@ -283,7 +348,16 @@ def build_resumed_gcode(
     """
     normalized_side = normalize_alignment_side(alignment_side, quadrant=quadrant)
     resolved_layer_height = float(layer_height_mm) if layer_height_mm is not None else infer_layer_height(original_gcode_text)
-    resume_z = infer_resume_z(print_height_mm=print_height_mm, layer_height_mm=resolved_layer_height)
+    resolved_initial_layer_height = infer_initial_layer_height(
+        original_gcode_text,
+        layer_height_mm=resolved_layer_height,
+    )
+    height_info = infer_true_print_height(
+        print_height_mm=print_height_mm,
+        layer_height_mm=resolved_layer_height,
+        initial_layer_height_mm=resolved_initial_layer_height,
+    )
+    resume_z = float(height_info["true_print_height"])
     z_floor = resume_z - float(z_floor_tol)
 
     layer_points = _collect_layer_points(
@@ -350,8 +424,13 @@ def build_resumed_gcode(
 
     header: List[str] = []
     header.append("; --- RESUME FROM FAILURE (OCTOGOAT) ---")
-    header.append(f"; Inputs: LH={resolved_layer_height:.5f}mm, PH={print_height_mm:.3f}mm")
-    header.append(f"; Computed resume height (RH): {resume_z:.3f} mm (nearest multiple of LH)")
+    header.append(
+        f"; Inputs: LH={resolved_layer_height:.5f}mm, ILH={resolved_initial_layer_height:.5f}mm, PH={print_height_mm:.3f}mm"
+    )
+    header.append(
+        f"; Adjusted print height: {height_info['normalized_height']:.5f} mm | Layer delta: {height_info['layer_adjustment']:.5f} mm"
+    )
+    header.append(f"; Computed resume height (RH): {resume_z:.3f} mm")
     header.append(f"; Alignment side: {normalized_side}")
     header.append(f"; Datum: X{datum.x:.3f} Y{datum.y:.3f} Z{datum.z:.3f}")
     header.append(f"; Anchor index: {anchor_index}")
@@ -418,6 +497,8 @@ def build_resumed_gcode(
         ok=True,
         firmware=(firmware or "").lower(),
         layer_height=round(resolved_layer_height, 5),
+        initial_layer_height=round(resolved_initial_layer_height, 5),
+        adjusted_print_height=round(height_info["normalized_height"], 5),
         alignment_side=normalized_side,
         resume_z=round(resume_z, 3),
         datum=dict(

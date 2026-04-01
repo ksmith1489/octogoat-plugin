@@ -6,6 +6,7 @@ import re
 import time
 import uuid
 
+import flask
 import octoprint.plugin
 import requests
 
@@ -95,7 +96,33 @@ class OctoGoatPlugin(
         self._logger.info("OctoGOAT loaded successfully")
         self._logger.info("OctoGOAT plugin active")
 
+    def on_api_get(self, request):
+        if request.args.get("download_resume") != "1":
+            return flask.jsonify(ok=True)
+
+        if not hasattr(self, "_resume_cache"):
+            response = flask.jsonify(ok=False, error="No resume built")
+            response.status_code = 404
+            return response
+
+        filename = getattr(self, "_resume_filename", "octogoat_resume.gcode")
+        response = flask.make_response(self._resume_cache)
+        response.headers["Content-Type"] = "text/plain; charset=utf-8"
+        response.headers["Content-Disposition"] = 'attachment; filename="{filename}"'.format(
+            filename=filename
+        )
+        return response
+
     def on_api_command(self, command, data):
+        data = data or {}
+
+        try:
+            return self._handle_api_command(command, data)
+        except Exception as e:
+            self._logger.exception("OctoGOAT API command failed: %s", command)
+            return dict(ok=False, error=str(e))
+
+    def _handle_api_command(self, command, data):
         if command == "ping":
             return dict(ok=True)
 
@@ -117,16 +144,16 @@ class OctoGoatPlugin(
                 return dict(valid=True)
 
             try:
-                r = requests.post(
+                response = requests.post(
                     validate_url,
                     json={"install_id": install_id},
                     timeout=5,
                 )
 
-                if r.status_code != 200:
+                if response.status_code != 200:
                     return dict(valid=False)
 
-                payload = r.json()
+                payload = response.json()
                 is_valid = payload.get("valid") is True
 
                 if is_valid:
@@ -134,7 +161,6 @@ class OctoGoatPlugin(
                     self._settings.save()
 
                 return dict(valid=is_valid)
-
             except Exception:
                 if last_validated and (now - last_validated) < WEEK_SECONDS:
                     return dict(valid=True)
@@ -149,42 +175,38 @@ class OctoGoatPlugin(
             legacy_layer_height = data.get("layer_height")
             if legacy_layer_height in ("", None):
                 legacy_layer_height = None
-
-            try:
-                if legacy_layer_height is not None:
+            elif legacy_layer_height is not None:
+                try:
                     legacy_layer_height = float(legacy_layer_height)
-            except Exception:
-                return dict(ok=False, error="Invalid layer height")
+                except Exception:
+                    return dict(ok=False, error="Invalid layer height")
 
-            try:
-                gcode_text, source = self._resolve_gcode_source(data)
-            except Exception as e:
-                return dict(ok=False, error=str(e))
-
-            try:
-                result = build_resumed_gcode(
-                    original_gcode_text=gcode_text,
-                    firmware=self._settings.get(["firmware_type"]),
-                    print_height_mm=measured_height,
-                    alignment_side=data.get("alignment_side") or data.get("side"),
-                    quadrant=data.get("quadrant"),
-                    layer_height_mm=legacy_layer_height,
-                )
-            except Exception as e:
-                return dict(ok=False, error=str(e))
+            gcode_text, source = self._resolve_gcode_source(data)
+            result = build_resumed_gcode(
+                original_gcode_text=gcode_text,
+                firmware=self._settings.get(["firmware_type"]),
+                print_height_mm=measured_height,
+                alignment_side=data.get("alignment_side") or data.get("side"),
+                quadrant=data.get("quadrant"),
+                layer_height_mm=legacy_layer_height,
+            )
 
             self._resume_cache = result["resumed_text"]
             self._resume_source = source
+            self._resume_filename = self._build_resume_filename(source)
 
             return dict(
                 ok=True,
                 layer_height=result["layer_height"],
+                initial_layer_height=result["initial_layer_height"],
+                adjusted_print_height=result["adjusted_print_height"],
                 resume_z=result["resume_z"],
                 alignment_side=result["alignment_side"],
                 datum=result["datum"],
                 preview=result["preview"],
                 park=self._get_assumed_position(),
                 file=source,
+                resume_file_name=self._resume_filename,
             )
 
         if command == "apply_park":
@@ -216,12 +238,7 @@ class OctoGoatPlugin(
                 return dict(ok=False, error="Invalid assumed position")
 
             self._set_assumed_position(x=x, y=y, z=z)
-
-            try:
-                self.sync_assumed_position_scripts()
-            except Exception as e:
-                return dict(ok=False, error="Assumed position saved but scripts failed to update: %s" % e)
-
+            self.sync_assumed_position_scripts()
             return dict(ok=True, park=self._get_assumed_position())
 
         if command == "goto_datum":
@@ -230,16 +247,16 @@ class OctoGoatPlugin(
             z = float(data.get("z"))
             safe_hop = float(self._settings.get(["safe_z_hop"]) or 10.0)
 
-            cmds = [
-                "G90",
-                "G0 Z{z}".format(z=self._format_gcode_value(z + safe_hop)),
-                "G0 X{x} Y{y}".format(
-                    x=self._format_gcode_value(x),
-                    y=self._format_gcode_value(y),
-                ),
-            ]
-
-            self._printer.commands(cmds)
+            self._printer.commands(
+                [
+                    "G90",
+                    "G0 Z{z}".format(z=self._format_gcode_value(z + safe_hop)),
+                    "G0 X{x} Y{y}".format(
+                        x=self._format_gcode_value(x),
+                        y=self._format_gcode_value(y),
+                    ),
+                ]
+            )
             return dict(ok=True)
 
         if command == "lock_datum":
@@ -247,24 +264,30 @@ class OctoGoatPlugin(
             x = float(data.get("x"))
             y = float(data.get("y"))
             z = float(data.get("z"))
+            safe_hop = float(self._settings.get(["safe_z_hop"]) or 10.0)
 
             if firmware == "klipper":
-                cmd = "SET_KINEMATIC_POSITION X={x} Y={y} Z={z}".format(
+                position_cmd = "SET_KINEMATIC_POSITION X={x} Y={y} Z={z}".format(
                     x=self._format_gcode_value(x),
                     y=self._format_gcode_value(y),
                     z=self._format_gcode_value(z),
                 )
             else:
-                cmd = "G92 X{x} Y{y} Z{z}".format(
+                position_cmd = "G92 X{x} Y{y} Z{z}".format(
                     x=self._format_gcode_value(x),
                     y=self._format_gcode_value(y),
                     z=self._format_gcode_value(z),
                 )
 
-            self._printer.commands(cmd)
-            self._printer.commands("G90")
-            self._printer.commands("G0 Z{z}".format(z=self._format_gcode_value(z + 10.0)))
-            return dict(ok=True)
+            self._printer.commands(
+                [
+                    position_cmd,
+                    "G91",
+                    "G0 Z{z}".format(z=self._format_gcode_value(safe_hop)),
+                    "G90",
+                ]
+            )
+            return dict(ok=True, message="it is now safe to set nozzle temp")
 
         if command == "execute_resume":
             if not hasattr(self, "_resume_cache"):
@@ -334,6 +357,14 @@ class OctoGoatPlugin(
         except Exception as e:
             raise ValueError("File read failed: %s" % e)
 
+    def _build_resume_filename(self, source):
+        source_name = (source or {}).get("name") or "octogoat_resume"
+        stem, _extension = os.path.splitext(source_name)
+        cleaned = re.sub(r"[^A-Za-z0-9._-]+", "_", stem).strip("._")
+        if not cleaned:
+            cleaned = "octogoat_resume"
+        return cleaned + "_resume.gcode"
+
     def _get_printer_zmax(self):
         profile = self._printer_profile_manager.get_current() or {}
         volume = profile.get("volume") or {}
@@ -348,7 +379,6 @@ class OctoGoatPlugin(
 
         z_offset = float(self._settings.get(["park_z_offset"]) or 50.0)
         park_z = max(0.0, min(zmax, zmax - z_offset))
-
         self._settings.set(["park_z"], park_z)
         self._settings.save()
 
@@ -395,7 +425,7 @@ class OctoGoatPlugin(
             ]
         )
 
-    def _merge_script_block(self, current_script, script_block):
+    def _merge_script_block(self, current_script, script_block, *, prepend=False):
         merged = current_script or ""
 
         for start_marker, end_marker in (
@@ -408,18 +438,26 @@ class OctoGoatPlugin(
             )
             merged = pattern.sub("", merged)
 
-        merged = merged.rstrip()
+        merged = merged.strip()
+        if prepend:
+            if merged:
+                return script_block + "\n\n" + merged + "\n"
+            return script_block + "\n"
+
         if merged:
-            merged += "\n\n"
-        merged += script_block + "\n"
-        return merged
+            return merged + "\n\n" + script_block + "\n"
+        return script_block + "\n"
 
     def sync_assumed_position_scripts(self):
         script_block = self._build_assumed_position_script()
 
         for script_name in ("afterPrintDone", "afterPrintCancelled"):
             current_script = self._settings.global_get(["scripts", "gcode", script_name]) or ""
-            new_script = self._merge_script_block(current_script, script_block)
+            new_script = self._merge_script_block(
+                current_script,
+                script_block,
+                prepend=(script_name == "afterPrintCancelled"),
+            )
             self._settings.global_set(["scripts", "gcode", script_name], new_script)
 
         self._settings.global_save()
