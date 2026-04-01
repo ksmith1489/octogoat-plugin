@@ -2,12 +2,17 @@ from __future__ import annotations
 
 import io
 import re
+from collections import Counter
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 
 DEFAULT_Z_MATCH_TOL = 0.05
 DEFAULT_Z_FLOOR_TOL = 0.05
+LAYER_HEIGHT_PATTERNS = (
+    re.compile(r"(?i)^\s*;\s*layer[_ ]height\s*[:=]\s*([-+]?\d*\.?\d+)\s*$"),
+    re.compile(r"(?i)^\s*;\s*layerheight\s*[:=]\s*([-+]?\d*\.?\d+)\s*$"),
+)
 
 
 @dataclass
@@ -86,6 +91,22 @@ def should_strip_line(line: str) -> bool:
     return False
 
 
+def normalize_alignment_side(alignment_side: Optional[str], quadrant: Optional[str] = None) -> str:
+    side = (alignment_side or "").strip().lower()
+    if side in ("left", "l"):
+        return "left"
+    if side in ("right", "r"):
+        return "right"
+
+    quadrant_value = (quadrant or "").strip().lower()
+    if quadrant_value in ("fl", "bl"):
+        return "left"
+    if quadrant_value in ("fr", "br"):
+        return "right"
+
+    return "left"
+
+
 def infer_resume_z(print_height_mm: float, layer_height_mm: float) -> float:
     if layer_height_mm <= 0:
         raise ValueError("Layer height must be > 0.")
@@ -93,6 +114,130 @@ def infer_resume_z(print_height_mm: float, layer_height_mm: float) -> float:
         raise ValueError("Print height must be >= 0.")
     k = int(round(print_height_mm / layer_height_mm))
     return max(0.0, k * layer_height_mm)
+
+
+def infer_layer_height(original_gcode_text: str) -> float:
+    for raw in io.StringIO(original_gcode_text):
+        stripped = raw.strip()
+        for pattern in LAYER_HEIGHT_PATTERNS:
+            match = pattern.match(stripped)
+            if not match:
+                continue
+            try:
+                value = float(match.group(1))
+            except Exception:
+                continue
+            if value > 0:
+                return value
+
+    layer_z_values = _collect_layer_z_values(original_gcode_text, printing_only=True)
+    if len(layer_z_values) < 2:
+        layer_z_values = _collect_layer_z_values(original_gcode_text, printing_only=False)
+    if len(layer_z_values) < 2:
+        raise ValueError("Could not detect layer height from selected GCODE.")
+
+    diffs = []
+    for previous, current in zip(layer_z_values, layer_z_values[1:]):
+        diff = round(current - previous, 5)
+        if diff > 0:
+            diffs.append(diff)
+
+    if not diffs:
+        raise ValueError("Could not detect layer height from selected GCODE.")
+
+    counts = Counter(diffs)
+    best_diff, _ = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[0]
+    return float(best_diff)
+
+
+def _collect_layer_z_values(original_gcode_text: str, *, printing_only: bool) -> List[float]:
+    current_z: Optional[float] = None
+    seen = set()
+    ordered: List[float] = []
+
+    for raw in io.StringIO(original_gcode_text):
+        zc = _extract_z_comment(raw)
+        if zc is not None:
+            current_z = float(zc)
+
+        if not _is_motion(raw):
+            continue
+
+        z = _extract_float_param(raw, "Z")
+        if z is not None:
+            current_z = float(z)
+
+        if current_z is None or current_z <= 0:
+            continue
+
+        if printing_only and not is_real_printing_move(raw):
+            continue
+
+        rounded = round(current_z, 5)
+        if rounded not in seen:
+            seen.add(rounded)
+            ordered.append(rounded)
+
+    return ordered
+
+
+def _collect_layer_points(
+    original_gcode_text: str,
+    *,
+    target_z: float,
+    z_match_tol: float,
+) -> List[ResumeDatum]:
+    points: List[ResumeDatum] = []
+    current_x: Optional[float] = None
+    current_y: Optional[float] = None
+    current_z: Optional[float] = None
+
+    for raw in io.StringIO(original_gcode_text):
+        if should_strip_line(raw):
+            continue
+
+        zc = _extract_z_comment(raw)
+        if zc is not None:
+            current_z = float(zc)
+
+        if not _is_motion(raw):
+            continue
+
+        x = _extract_float_param(raw, "X")
+        if x is not None:
+            current_x = float(x)
+
+        y = _extract_float_param(raw, "Y")
+        if y is not None:
+            current_y = float(y)
+
+        z = _extract_float_param(raw, "Z")
+        if z is not None:
+            current_z = float(z)
+
+        if current_z is None or abs(current_z - target_z) > z_match_tol:
+            continue
+        if current_x is None or current_y is None:
+            continue
+
+        points.append(ResumeDatum(x=float(current_x), y=float(current_y), z=float(target_z)))
+
+    return points
+
+
+def choose_alignment_datum(points: List[ResumeDatum], alignment_side: str, resume_z: float) -> ResumeDatum:
+    if not points:
+        raise ValueError("Could not find motion points at the computed resume layer.")
+
+    normalized_side = normalize_alignment_side(alignment_side)
+    target_x = min(point.x for point in points)
+    if normalized_side == "right":
+        target_x = max(point.x for point in points)
+
+    matching_points = [point for point in points if abs(point.x - target_x) <= 0.00001]
+    chosen_point = min(matching_points, key=lambda point: (point.y, point.x))
+
+    return ResumeDatum(x=float(target_x), y=float(chosen_point.y), z=float(resume_z))
 
 
 def _replace_e_value(line: str, new_e: float) -> str:
@@ -123,8 +268,10 @@ def build_resumed_gcode(
     original_gcode_text: str,
     *,
     firmware: str,
-    layer_height_mm: float,
     print_height_mm: float,
+    alignment_side: str = "left",
+    layer_height_mm: Optional[float] = None,
+    quadrant: Optional[str] = None,
     z_match_tol: float = DEFAULT_Z_MATCH_TOL,
     z_floor_tol: float = DEFAULT_Z_FLOOR_TOL,
     inject_last_motion_feedrate: bool = True,
@@ -134,8 +281,17 @@ def build_resumed_gcode(
     Pure engine: returns resumed_text + preview + metadata.
     Does NOT move printer, does NOT write files.
     """
-    resume_z = infer_resume_z(print_height_mm=print_height_mm, layer_height_mm=layer_height_mm)
+    normalized_side = normalize_alignment_side(alignment_side, quadrant=quadrant)
+    resolved_layer_height = float(layer_height_mm) if layer_height_mm is not None else infer_layer_height(original_gcode_text)
+    resume_z = infer_resume_z(print_height_mm=print_height_mm, layer_height_mm=resolved_layer_height)
     z_floor = resume_z - float(z_floor_tol)
+
+    layer_points = _collect_layer_points(
+        original_gcode_text,
+        target_z=resume_z,
+        z_match_tol=z_match_tol,
+    )
+    datum = choose_alignment_datum(layer_points, normalized_side, resume_z)
 
     detected_mode = "absolute"
     last_e_abs = 0.0
@@ -143,7 +299,6 @@ def build_resumed_gcode(
     current_x: Optional[float] = None
     current_y: Optional[float] = None
     current_z: Optional[float] = None
-    anchor_datum: Optional[ResumeDatum] = None
     anchor_index: Optional[int] = None
 
     # PASS 1: find anchor + last E + last F
@@ -188,11 +343,6 @@ def build_resumed_gcode(
         if current_z is not None and current_z >= (resume_z - z_match_tol):
             if (not should_strip_line(raw)) and is_real_printing_move(raw):
                 anchor_index = i
-                anchor_datum = ResumeDatum(
-                    x=float(current_x if current_x is not None else 0.0),
-                    y=float(current_y if current_y is not None else 0.0),
-                    z=float(current_z),
-                )
                 break
 
     if anchor_index is None:
@@ -200,8 +350,10 @@ def build_resumed_gcode(
 
     header: List[str] = []
     header.append("; --- RESUME FROM FAILURE (OCTOGOAT) ---")
-    header.append(f"; Inputs: LH={layer_height_mm:.5f}mm, PH={print_height_mm:.3f}mm")
+    header.append(f"; Inputs: LH={resolved_layer_height:.5f}mm, PH={print_height_mm:.3f}mm")
     header.append(f"; Computed resume height (RH): {resume_z:.3f} mm (nearest multiple of LH)")
+    header.append(f"; Alignment side: {normalized_side}")
+    header.append(f"; Datum: X{datum.x:.3f} Y{datum.y:.3f} Z{datum.z:.3f}")
     header.append(f"; Anchor index: {anchor_index}")
     header.append(f"; Z-match tol: {z_match_tol:.3f} mm | Z-floor guard: Z >= {z_floor:.3f} mm")
     header.append(f"; Detected extrusion mode in source: {detected_mode.upper()}")
@@ -265,11 +417,14 @@ def build_resumed_gcode(
     return dict(
         ok=True,
         firmware=(firmware or "").lower(),
+        layer_height=round(resolved_layer_height, 5),
+        alignment_side=normalized_side,
         resume_z=round(resume_z, 3),
         datum=dict(
-            x=float(anchor_datum.x if anchor_datum else 0.0),
-            y=float(anchor_datum.y if anchor_datum else 0.0),
-            z=float(anchor_datum.z if anchor_datum else 0.0),
+            x=float(datum.x),
+            y=float(datum.y),
+            z=float(datum.z),
+            alignment_side=normalized_side,
         ),
         preview=preview_buf,
         resumed_text="\n".join(out_lines) + "\n",

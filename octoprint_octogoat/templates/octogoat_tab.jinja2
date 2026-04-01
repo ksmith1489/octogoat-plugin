@@ -22,14 +22,23 @@
                         type="button"
                         data-toggle="modal"
                         data-target="#pricing-modal"
-                        Pricing
+                        title="place holder">
+                    Pricing/Plans
+                </button>
+
+                <button class="btn octogoat-nav-btn"
+                        type="button"
+                        data-toggle="modal"
+                        data-target="#assumed-position-modal"
+                        title="place holder">
+                    Assumed Position
                 </button>
 
                 <button class="btn octogoat-nav-btn"
                         type="button"
                         data-toggle="modal"
                         data-target="#howto-modal"
-                        title="this is a test to see if the text will show up as a tooltip"">
+                        title="place holder">
                     How To
                 </button>
 
@@ -37,7 +46,7 @@
                         type="button"
                         data-toggle="modal"
                         data-target="#contact-modal"
-                        title="questions, concerns, anything else contact ksmith14892protonmail.com">
+                        title="place holder">
                     Contact
                 </button>
             </div>
@@ -56,56 +65,86 @@
         </div>
 
         <div class="octogoat-card">
-            <h4>Inputs</h4>
+            <div class="octogoat-inputs-head">
+                <h4>Inputs</h4>
+
+                <div class="octogoat-file-selector">
+                    <div class="octogoat-file-selector-label">Selected GCODE File</div>
+
+                    <div class="octogoat-file-selected"
+                         data-bind="text: selectedFileLabel"
+                         title="place holder"></div>
+
+                    <div class="octogoat-file-selector-controls">
+                        <select class="input-block-level octogoat-input"
+                                data-bind="
+                                    options: availableFiles,
+                                    optionsText: 'label',
+                                    optionsValue: 'path',
+                                    value: selectedServerFilePath,
+                                    optionsCaption: 'Choose OctoPrint file',
+                                    event: { change: selectServerFile }
+                                "
+                                title="place holder"></select>
+
+                        <button class="btn octogoat-function-btn octogoat-file-picker-btn"
+                                type="button"
+                                data-bind="click: openLocalFilePicker"
+                                title="place holder">
+                            Choose From Device
+                        </button>
+                    </div>
+
+                    <div class="octogoat-file-dropzone"
+                         data-bind="css: { 'is-dragging': isDraggingFile() }"
+                         title="place holder">
+                        Drag and drop a `.gcode` file here
+                    </div>
+
+                    <input id="octogoat-local-file-input"
+                           type="file"
+                           accept=".gcode,.gco,.gc,.g"
+                           class="octogoat-hidden-file-input">
+                </div>
+            </div>
 
             <div class="row-fluid">
-                <div class="span4">
+                <div class="span6">
                     <label>Measured Print Height (mm)</label>
 
                     <input type="number"
-                            step="0.1"
-                            class="input-block-level octogoat-input"
-                            placeholder="22.0"
-                            data-bind="value: measuredHeight"
-                            title="measure the height of partial print from extreme left and right
-                                record the lowest of the two measurements here to the nearest 0,1mm">
+                           step="0.1"
+                           class="input-block-level octogoat-input"
+                           placeholder="22.0"
+                           data-bind="value: measuredHeight"
+                           title="Measure the partial print from both sides and enter the lower value to the nearest 0.1 mm.">
                 </div>
 
-                <div class="span4">
-                    <label>Measured side used choose: left/right</label>
+                <div class="span6">
+                    <label>Alignment Side</label>
 
                     <select class="input-block-level octogoat-input"
-                            data-bind="value: x-extreme" #data-bind needs to be added for this
-                            title="from which side did you obtain the measurement for print height:  the left-extreme or the right extreme">
-                        <option value="Left">left</option>
-                        <option value="Right">right</option>
+                            data-bind="value: alignmentSide"
+                            title="Choose the side used for the left or right alignment datum selection rule.">
+                        <option value="left">Left</option>
+                        <option value="right">Right</option>
                     </select>
                 </div>
+            </div>
 
-                <div class="span4">
-                    <label>Layer Height (mm)</label>
-
-                    <input type="number"
-                           step="0.01"
-                           class="input-block-level octogoat-input"
-                           placeholder="0.2"
-                           data-bind="value: layerHeight"
-                           title="Enter the layerheight from slicer settings*
-                           if an different initial layer height is used, take the 
-                           difference between the two layer heights and subtract 
-                           from measured print height input">
-                </div>
+            <div class="octogoat-help-text">
+                Layer height is detected automatically from the selected GCODE file.
             </div>
 
             <button class="btn btn-large btn-block octogoat-action-btn"
                     data-bind="click: buildResume, enable: licenseValid()"
-                    title="reconstructs safe resume gcode based on inputs provided">
+                    title="Reconstruct safe resume GCODE using the selected file and measured height.">
                 RECONSTRUCT GCODE AND PROCEED TO CALIBRATE POSITION
             </button>
         </div>
 
         <div class="octogoat-card" data-bind="visible: resumeBuilt()">
-            <h4>CALIBRATE MY POSITION</h4>
+            <h4>Calibrate My Position</h4>
 
             <div class="octogoat-warning-box">
                 *Warning! While possible to resume a failed print in seconds by simply clicking
@@ -122,35 +161,42 @@
                 OctoGoat powered by Lazarus. Patent pending. All rights reserved.
             </div>
 
+            <div class="octogoat-readout">
+                <span>Resume Z: <strong data-bind="text: resumeZ"></strong></span>
+                <span>Datum X: <strong data-bind="text: datumX"></strong></span>
+                <span>Datum Y: <strong data-bind="text: datumY"></strong></span>
+                <span>Datum Z: <strong data-bind="text: datumZ"></strong></span>
+            </div>
+
             <div class="row-fluid">
                 <div class="span4">
                     <button class="btn btn-block octogoat-function-btn"
                             data-bind="click: applyPark"
-                            title="PLACEHOLDER TOOLTIP">
-                        1 — ASSUMED POSITION
+                            title="place holder">
+                        1 - Set Assumed Position
                     </button>
                 </div>
 
                 <div class="span4">
                     <button class="btn btn-block octogoat-function-btn"
                             data-bind="click: goToDatum"
-                            title="PLACEHOLDER TOOLTIP">
-                        2 — MOVING ON TO PERFECTION
+                            title="place holder">
+                        2 - Move To Alignment Datum
                     </button>
                 </div>
 
                 <div class="span4">
                     <button class="btn btn-block octogoat-function-btn"
                             data-bind="click: lockDatum"
-                            title="G92 or Skp to lock in true alignment upon user confirmation">
-                        3 — POSITION CALIBRATION COMPLETE
+                            title="place holder">
+                        3 - Position Calibration Complete
                     </button>
                 </div>
             </div>
         </div>
 
         <div class="octogoat-card">
-            <h4>Resume GCode Preview</h4>
+            <h4>Resume GCODE Preview</h4>
 
             <pre class="octogoat-preview"
                  data-bind="visible: resumeBuilt(), text: previewText"></pre>
@@ -166,13 +212,12 @@
 
             <button class="btn btn-large octogoat-resume-btn"
                     data-bind="enable: motionAcknowledged() && resumeBuilt(), click: resumeNow"
-                    title="PLACEHOLDER TOOLTIP">
-                RESUME PRINT
+                    title="place holder">
+                Resume Print
             </button>
         </div>
     </div>
 
-    <!-- Pricing Modal -->
     <div id="pricing-modal"
          class="modal hide fade"
          tabindex="-1"
@@ -194,7 +239,61 @@
         </div>
     </div>
 
-    <!-- How To Modal -->
+    <div id="assumed-position-modal"
+         class="modal hide fade"
+         tabindex="-1"
+         role="dialog"
+         aria-labelledby="assumed-position-modal-label"
+         aria-hidden="true">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h3 id="assumed-position-modal-label">Assumed Position</h3>
+        </div>
+
+        <div class="modal-body">
+            <p class="octogoat-help-text">place holder</p>
+
+            <div class="row-fluid">
+                <div class="span4">
+                    <label>X =</label>
+                    <input type="number"
+                           step="0.01"
+                           class="input-block-level octogoat-input"
+                           data-bind="value: parkX, event: { change: saveAssumedPosition }"
+                           title="place holder">
+                </div>
+
+                <div class="span4">
+                    <label>Y =</label>
+                    <input type="number"
+                           step="0.01"
+                           class="input-block-level octogoat-input"
+                           data-bind="value: parkY, event: { change: saveAssumedPosition }"
+                           title="place holder">
+                </div>
+
+                <div class="span4">
+                    <label>Z =</label>
+                    <input type="number"
+                           step="0.01"
+                           class="input-block-level octogoat-input"
+                           data-bind="value: parkZ, event: { change: saveAssumedPosition }"
+                           title="place holder">
+                </div>
+            </div>
+
+            <div class="octogoat-help-text">
+                These values autosave and stay mirrored into OctoPrint's
+                <strong>after print job completes</strong> and
+                <strong>after print job is canceled</strong> GCODE scripts.
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn" type="button" data-dismiss="modal">Close</button>
+        </div>
+    </div>
+
     <div id="howto-modal"
          class="modal hide fade"
          tabindex="-1"
@@ -215,7 +314,6 @@
         </div>
     </div>
 
-    <!-- Contact Modal -->
     <div id="contact-modal"
          class="modal hide fade"
          tabindex="-1"

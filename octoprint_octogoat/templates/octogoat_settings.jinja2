@@ -1,7 +1,6 @@
 <div class="section">
   <h3>OctoGoat Settings</h3>
 
-  <!-- Firmware -->
   <div class="control-group">
     <label class="control-label">Firmware Type</label>
     <div class="controls">
@@ -15,7 +14,6 @@
     </div>
   </div>
 
-  <!-- Engine URL -->
   <div class="control-group">
     <label class="control-label">Engine URL</label>
     <div class="controls">
@@ -23,42 +21,18 @@
              class="input-block-level"
              data-bind="value: settings.plugins.octogoat.engine_url">
       <p class="help-block">
-        License authority endpoint (cloud by default).
+        License authority endpoint used for OctoGoat validation.
       </p>
     </div>
   </div>
 
-  <hr>
-
-  <h4>Park Position</h4>
-
   <div class="control-group">
-    <label class="control-label">Park X</label>
+    <label class="control-label">Assumed Position</label>
     <div class="controls">
-      <input type="number"
-             class="input-small"
-             step="0.01"
-             data-bind="value: settings.plugins.octogoat.park_x">
-    </div>
-  </div>
-
-  <div class="control-group">
-    <label class="control-label">Park Y</label>
-    <div class="controls">
-      <input type="number"
-             class="input-small"
-             step="0.01"
-             data-bind="value: settings.plugins.octogoat.park_y">
-    </div>
-  </div>
-
-  <div class="control-group">
-    <label class="control-label">Park Z Offset</label>
-    <div class="controls">
-      <input type="number"
-             class="input-small"
-             step="0.01"
-             data-bind="value: settings.plugins.octogoat.park_z_offset">
+      <p class="help-block">
+        Assumed position coordinates are now managed from the OctoGoat tab under
+        <strong>Assumed Position</strong>.
+      </p>
     </div>
   </div>
 </div>

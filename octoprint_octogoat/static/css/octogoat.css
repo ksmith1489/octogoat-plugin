@@ -200,6 +200,104 @@
     letter-spacing: 1px;
 }
 
+.octogoat-inputs-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.octogoat-inputs-head h4 {
+    margin-bottom: 0;
+}
+
+.octogoat-file-selector {
+    flex: 1 1 480px;
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+.octogoat-file-selector-label,
+.octogoat-help-text {
+    color: #ffcf97;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.octogoat-file-selected {
+    background: #161616;
+    color: #ffd8a7;
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    min-height: 46px;
+    font-weight: 800;
+    word-break: break-word;
+}
+
+.octogoat-file-selector-controls {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+    flex-wrap: wrap;
+}
+
+.octogoat-file-selector-controls select {
+    flex: 1 1 260px;
+    margin-bottom: 0;
+}
+
+.octogoat-file-picker-btn {
+    margin-top: 0;
+    min-width: 180px;
+}
+
+.octogoat-file-dropzone {
+    margin-top: 10px;
+    border: 2px dashed #17c653;
+    border-radius: 10px;
+    padding: 16px 18px;
+    text-align: center;
+    color: #a6ffb2;
+    font-weight: 800;
+    background: rgba(23, 198, 83, 0.08);
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.octogoat-file-dropzone.is-dragging {
+    border-color: #ffb15c;
+    background: rgba(255, 138, 31, 0.15);
+    color: #ffd8a7;
+}
+
+.octogoat-hidden-file-input {
+    display: none !important;
+}
+
+.octogoat-help-text {
+    margin-top: 12px;
+}
+
+.octogoat-readout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin: 0 0 12px 0;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #151515;
+    border: 1px solid #262626;
+    color: #ffd8a7;
+    font-weight: 700;
+}
+
+.octogoat-readout strong {
+    color: #9dff9d;
+}
+
 .octogoat-ui label {
     color: #9dff9d;
     font-weight: 700;
@@ -363,6 +461,14 @@
         margin-left: 0;
         margin-bottom: 14px;
     }
+
+    .octogoat-file-selector-controls {
+        flex-direction: column;
+    }
+
+    .octogoat-file-picker-btn {
+        width: 100%;
+    }
 }
     .octogoat-action-btn{
         white-space:normal;
@@ -400,4 +506,3 @@
         height:52px;
         pointer-events:none;
     }
-
