@@ -29,7 +29,7 @@
                         type="button"
                         data-toggle="modal"
                         data-target="#howto-modal"
-                        title="PLACEHOLDER TOOLTIP">
+                        title="this is a test to see if the text will show up as a tooltip"">
                     How To
                 </button>
 
@@ -37,7 +37,7 @@
                         type="button"
                         data-toggle="modal"
                         data-target="#contact-modal"
-                        title="PLACEHOLDER TOOLTIP">
+                        title="questions, concerns, anything else contact ksmith14892protonmail.com">
                     Contact
                 </button>
             </div>
@@ -63,23 +63,22 @@
                     <label>Measured Print Height (mm)</label>
 
                     <input type="number"
-                           step="0.1"
-                           class="input-block-level octogoat-input"
-                           placeholder="22.0"
-                           data-bind="value: measuredHeight"
-                           title="PLACEHOLDER TOOLTIP">
+                            step="0.1"
+                            class="input-block-level octogoat-input"
+                            placeholder="22.0"
+                            data-bind="value: measuredHeight"
+                            title="measure the height of partial print from extreme left and right
+                                record the lowest of the two measurements here to the nearest 0,1mm">
                 </div>
 
                 <div class="span4">
-                    <label>Quadrant</label>
+                    <label>Measured side used choose: left/right</label>
 
                     <select class="input-block-level octogoat-input"
-                            data-bind="value: quadrant"
-                            title="PLACEHOLDER TOOLTIP">
-                        <option value="front-left">Left-Front</option>
-                        <option value="back-left">Left-Back</option>
-                        <option value="front-right">Right-Front</option>
-                        <option value="back-right">Right-Back</option>
+                            data-bind="value: x-extreme"
+                            title="choose the same side which produced lowest measurement">
+                        <option value="Left</option>
+                        <option value="Right"></option>
                     </select>
                 </div>
 
@@ -91,13 +90,16 @@
                            class="input-block-level octogoat-input"
                            placeholder="0.2"
                            data-bind="value: layerHeight"
-                           title="PLACEHOLDER TOOLTIP">
+                           title="Enter the layerheight from slicer settings*
+                           if an different initial layer height is used, take the 
+                           difference between the two layer heights and subtract 
+                           from measured print height input">
                 </div>
             </div>
 
             <button class="btn btn-large btn-block octogoat-action-btn"
                     data-bind="click: buildResume, enable: licenseValid()"
-                    title="PLACEHOLDER TOOLTIP">
+                    title="reconstructs safe resume gcode based on inputs provided">
                 RECONSTRUCT GCODE AND PROCEED TO CALIBRATE POSITION
             </button>
         </div>
