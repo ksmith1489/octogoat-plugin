@@ -75,10 +75,10 @@
                     <label>Measured side used choose: left/right</label>
 
                     <select class="input-block-level octogoat-input"
-                            data-bind="value: x-extreme"
-                            title="choose the same side which produced lowest measurement">
-                        <option value="Left</option>
-                        <option value="Right"></option>
+                            data-bind="value: x-extreme" #data-bind needs to be added for this
+                            title="from which side did you obtain the measurement for print height:  the left-extreme or the right extreme">
+                        <option value="Left">left</option>
+                        <option value="Right">right</option>
                     </select>
                 </div>
 
@@ -142,7 +142,7 @@
                 <div class="span4">
                     <button class="btn btn-block octogoat-function-btn"
                             data-bind="click: lockDatum"
-                            title="PLACEHOLDER TOOLTIP">
+                            title="G92 or Skp to lock in true alignment upon user confirmation">
                         3 — POSITION CALIBRATION COMPLETE
                     </button>
                 </div>
