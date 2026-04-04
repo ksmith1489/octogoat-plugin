@@ -300,7 +300,15 @@ class OctoGoatPlugin(
         return None
 
     def _get_current_job_file(self):
-        current = self._printer.get_current_data() or {}
+        printer = getattr(self, "_printer", None)
+        if printer is None:
+            return None
+
+        try:
+            current = printer.get_current_data() or {}
+        except Exception:
+            return None
+
         job = current.get("job") or {}
         file_info = job.get("file") or {}
         name = file_info.get("name")
@@ -366,19 +374,37 @@ class OctoGoatPlugin(
         return cleaned + "_resume.gcode"
 
     def _get_printer_zmax(self):
-        profile = self._printer_profile_manager.get_current() or {}
-        volume = profile.get("volume") or {}
-        return float(volume.get("height") or 0.0)
+        try:
+            profile_manager = getattr(self, "_printer_profile_manager", None)
+            if profile_manager is None:
+                return None
+
+            profile = profile_manager.get_current() or {}
+            volume = profile.get("volume") or {}
+            zmax = float(volume.get("height") or 0.0)
+            if zmax > 0:
+                return zmax
+        except Exception:
+            pass
+
+        return None
+
+    def _get_default_assumed_position_z(self):
+        zmax = self._get_printer_zmax()
+        if zmax is not None:
+            park_z = zmax - 50.0
+            if park_z > 0:
+                return park_z
+
+        return 200.0
 
     def _ensure_assumed_position_defaults(self):
-        zmax = self._get_printer_zmax()
         stored_park_z = self._settings.get(["park_z"])
 
         if stored_park_z not in ("", None):
             return
 
-        z_offset = float(self._settings.get(["park_z_offset"]) or 50.0)
-        park_z = max(0.0, min(zmax, zmax - z_offset))
+        park_z = self._get_default_assumed_position_z()
         self._settings.set(["park_z"], park_z)
         self._settings.save()
 
@@ -389,10 +415,13 @@ class OctoGoatPlugin(
         stored_park_z = self._settings.get(["park_z"])
 
         if stored_park_z in ("", None):
-            z_offset = float(self._settings.get(["park_z_offset"]) or 50.0)
-            park_z = max(0.0, min(zmax, zmax - z_offset))
+            park_z = self._get_default_assumed_position_z()
         else:
-            park_z = max(0.0, min(zmax, float(stored_park_z)))
+            park_z = float(stored_park_z)
+            if zmax is not None:
+                park_z = max(0.0, min(zmax, park_z))
+            else:
+                park_z = max(0.0, park_z)
 
         return dict(
             x=round(park_x, 3),
@@ -402,12 +431,15 @@ class OctoGoatPlugin(
 
     def _set_assumed_position(self, *, x, y, z):
         zmax = self._get_printer_zmax()
-        clamped_z = max(0.0, min(zmax, float(z)))
+        clamped_z = max(0.0, float(z))
+        if zmax is not None:
+            clamped_z = min(zmax, clamped_z)
 
         self._settings.set(["park_x"], float(x))
         self._settings.set(["park_y"], float(y))
         self._settings.set(["park_z"], clamped_z)
-        self._settings.set(["park_z_offset"], max(0.0, zmax - clamped_z))
+        if zmax is not None:
+            self._settings.set(["park_z_offset"], max(0.0, zmax - clamped_z))
         self._settings.save()
 
     def _build_assumed_position_script(self):
@@ -415,13 +447,27 @@ class OctoGoatPlugin(
         return "\n".join(
             [
                 ASSUMED_POSITION_MARKER_START,
+                "G91",
+                "G0 Z10",
                 "G90",
-                "G0 Z{z}".format(z=self._format_gcode_value(park["z"])),
-                "G0 X{x} Y{y}".format(
+                "G0 X{x} Y{y} Z{z}".format(
                     x=self._format_gcode_value(park["x"]),
                     y=self._format_gcode_value(park["y"]),
+                    z=self._format_gcode_value(park["z"]),
                 ),
                 ASSUMED_POSITION_MARKER_END,
+            ]
+        )
+
+    def _build_cancelled_shutdown_script(self):
+        return "\n".join(
+            [
+                self._build_assumed_position_script(),
+                "",
+                "M84",
+                "M104 T0 S0",
+                "M140 S0",
+                "M106 S0",
             ]
         )
 
@@ -450,15 +496,16 @@ class OctoGoatPlugin(
 
     def sync_assumed_position_scripts(self):
         script_block = self._build_assumed_position_script()
+        done_script = self._settings.global_get(["scripts", "gcode", "afterPrintDone"]) or ""
 
-        for script_name in ("afterPrintDone", "afterPrintCancelled"):
-            current_script = self._settings.global_get(["scripts", "gcode", script_name]) or ""
-            new_script = self._merge_script_block(
-                current_script,
-                script_block,
-                prepend=(script_name == "afterPrintCancelled"),
-            )
-            self._settings.global_set(["scripts", "gcode", script_name], new_script)
+        self._settings.global_set(
+            ["scripts", "gcode", "afterPrintDone"],
+            self._merge_script_block(done_script, script_block),
+        )
+        self._settings.global_set(
+            ["scripts", "gcode", "afterPrintCancelled"],
+            self._build_cancelled_shutdown_script() + "\n",
+        )
 
         self._settings.global_save()
         self._settings.set(["smart_park_enabled"], True)

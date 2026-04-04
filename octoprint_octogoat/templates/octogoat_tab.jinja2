@@ -264,37 +264,14 @@
         <div class="modal-body">
             <p class="octogoat-help-text">place holder</p>
 
-            <div class="row-fluid">
-                <div class="span4">
-                    <label>X =</label>
-                    <input type="number"
-                           step="0.01"
-                           class="input-block-level octogoat-input"
-                           data-bind="value: parkX, event: { change: saveAssumedPosition }"
-                           title="place holder">
-                </div>
-
-                <div class="span4">
-                    <label>Y =</label>
-                    <input type="number"
-                           step="0.01"
-                           class="input-block-level octogoat-input"
-                           data-bind="value: parkY, event: { change: saveAssumedPosition }"
-                           title="place holder">
-                </div>
-
-                <div class="span4">
-                    <label>Z =</label>
-                    <input type="number"
-                           step="0.01"
-                           class="input-block-level octogoat-input"
-                           data-bind="value: parkZ, event: { change: saveAssumedPosition }"
-                           title="place holder">
-                </div>
+            <div class="octogoat-datum-display" title="placeholder">
+                <span>X = <strong data-bind="text: parkX"></strong></span>
+                <span>Y = <strong data-bind="text: parkY"></strong></span>
+                <span>Z = <strong data-bind="text: parkZ"></strong></span>
             </div>
 
             <div class="octogoat-help-text">
-                These values autosave and stay mirrored into OctoPrint's
+                These read-only values mirror the plain GCODE park commands in OctoPrint's
                 <strong>after print job completes</strong> and
                 <strong>after print job is canceled</strong> GCODE scripts.
             </div>
