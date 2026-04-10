@@ -2,18 +2,9 @@
     <div class="container-fluid octogoat-ui">
 
         <div class="octogoat-hero">
-            <div class="octogoat-title-wrap">
-                <div class="octogoat-title-logo">
-                    <img class="octogoat-goat-overlay"
-                         src="/plugin/octogoat/static/img/octogoat_icon.svg"
-                         alt="OctoGOAT">
-                    <h2 class="octogoat-title">OctoGOAT</h2>
-                </div>
-
-                <div class="octogoat-tagline">
-                    Save time. Save money. Save that print.
-                </div>
-            </div>
+            <img class="octogoat-hero-art"
+                 src="/plugin/octogoat/static/img/octogoat_hero.svg"
+                 alt="OctoGOAT hero art">
         </div>
 
         <div class="octogoat-nav-row">
@@ -264,16 +255,40 @@
         <div class="modal-body">
             <p class="octogoat-help-text">place holder</p>
 
-            <div class="octogoat-datum-display" title="placeholder">
-                <span>X = <strong data-bind="text: parkX"></strong></span>
-                <span>Y = <strong data-bind="text: parkY"></strong></span>
-                <span>Z = <strong data-bind="text: parkZ"></strong></span>
+            <div class="row-fluid">
+                <div class="span4">
+                    <label>X =</label>
+                    <input type="number"
+                           step="0.01"
+                           class="input-block-level octogoat-input"
+                           data-bind="value: parkX, event: { change: saveAssumedPosition }"
+                           title="place holder">
+                </div>
+
+                <div class="span4">
+                    <label>Y =</label>
+                    <input type="number"
+                           step="0.01"
+                           class="input-block-level octogoat-input"
+                           data-bind="value: parkY, event: { change: saveAssumedPosition }"
+                           title="place holder">
+                </div>
+
+                <div class="span4">
+                    <label>Z =</label>
+                    <input type="number"
+                           step="0.01"
+                           class="input-block-level octogoat-input"
+                           data-bind="value: parkZ, event: { change: saveAssumedPosition }"
+                           title="place holder">
+                </div>
             </div>
 
             <div class="octogoat-help-text">
-                These read-only values mirror the plain GCODE park commands in OctoPrint's
+                These values mirror the OctoGOAT park commands in OctoPrint's
                 <strong>after print job completes</strong> and
-                <strong>after print job is canceled</strong> GCODE scripts.
+                <strong>after print job is canceled</strong> GCODE scripts. Changes here update those scripts,
+                and manual script edits are reloaded back into this display after save.
             </div>
         </div>
 

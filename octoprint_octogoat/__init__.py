@@ -19,6 +19,18 @@ ASSUMED_POSITION_MARKER_END = "; --- End OctoGOAT Assumed Position ---"
 LEGACY_MARKER_START = "; --- OctoGOAT Smart Park ---"
 LEGACY_MARKER_END = "; --- End OctoGOAT Smart Park ---"
 LOCAL_STORAGE = "local"
+ASSUMED_POSITION_BLOCK_RE = re.compile(
+    re.escape(ASSUMED_POSITION_MARKER_START)
+    + r"(.*?)"
+    + re.escape(ASSUMED_POSITION_MARKER_END),
+    flags=re.S,
+)
+ASSUMED_POSITION_MOVE_RE = re.compile(
+    r"^\s*G(?:0|1)\d?\b[^\n;]*\bX\s*(?P<x>[+-]?(?:\d+(?:\.\d+)?|\.\d+))"
+    + r"[^\n;]*\bY\s*(?P<y>[+-]?(?:\d+(?:\.\d+)?|\.\d+))"
+    + r"[^\n;]*\bZ\s*(?P<z>[+-]?(?:\d+(?:\.\d+)?|\.\d+))",
+    flags=re.I | re.M,
+)
 
 
 class OctoGoatPlugin(
@@ -238,8 +250,9 @@ class OctoGoatPlugin(
                 return dict(ok=False, error="Invalid assumed position")
 
             self._set_assumed_position(x=x, y=y, z=z)
-            self.sync_assumed_position_scripts()
-            return dict(ok=True, park=self._get_assumed_position())
+            park = self._get_assumed_position_from_settings()
+            self.sync_assumed_position_scripts(park=park)
+            return dict(ok=True, park=park)
 
         if command == "goto_datum":
             x = float(data.get("x"))
@@ -408,7 +421,7 @@ class OctoGoatPlugin(
         self._settings.set(["park_z"], park_z)
         self._settings.save()
 
-    def _get_assumed_position(self):
+    def _get_assumed_position_from_settings(self):
         park_x = float(self._settings.get(["park_x"]) or 20.0)
         park_y = float(self._settings.get(["park_y"]) or 20.0)
         zmax = self._get_printer_zmax()
@@ -429,6 +442,73 @@ class OctoGoatPlugin(
             z=round(park_z, 3),
         )
 
+    def _parse_assumed_position_from_script(self, script_text):
+        if not isinstance(script_text, str) or not script_text.strip():
+            return None
+
+        block_match = ASSUMED_POSITION_BLOCK_RE.search(script_text)
+        search_text = block_match.group(1) if block_match else script_text
+        move_match = ASSUMED_POSITION_MOVE_RE.search(search_text)
+        if not move_match:
+            return None
+
+        return dict(
+            x=round(float(move_match.group("x")), 3),
+            y=round(float(move_match.group("y")), 3),
+            z=round(float(move_match.group("z")), 3),
+        )
+
+    def _assumed_positions_match(self, first, second):
+        if not first or not second:
+            return False
+
+        return (
+            round(float(first.get("x", 0.0)), 3) == round(float(second.get("x", 0.0)), 3)
+            and round(float(first.get("y", 0.0)), 3) == round(float(second.get("y", 0.0)), 3)
+            and round(float(first.get("z", 0.0)), 3) == round(float(second.get("z", 0.0)), 3)
+        )
+
+    def _get_assumed_position_from_scripts(self, settings_park=None):
+        if settings_park is None:
+            settings_park = self._get_assumed_position_from_settings()
+
+        done_park = self._parse_assumed_position_from_script(
+            self._settings.global_get(["scripts", "gcode", "afterPrintDone"]) or ""
+        )
+        cancelled_park = self._parse_assumed_position_from_script(
+            self._settings.global_get(["scripts", "gcode", "afterPrintCancelled"]) or ""
+        )
+
+        if done_park and cancelled_park:
+            if self._assumed_positions_match(done_park, cancelled_park):
+                return cancelled_park
+            if self._assumed_positions_match(done_park, settings_park):
+                return cancelled_park
+            if self._assumed_positions_match(cancelled_park, settings_park):
+                return done_park
+            return cancelled_park
+
+        return cancelled_park or done_park
+
+    def _sync_assumed_position_settings_from_scripts(self):
+        settings_park = self._get_assumed_position_from_settings()
+        script_park = self._get_assumed_position_from_scripts(settings_park=settings_park)
+
+        if not script_park:
+            return settings_park
+
+        if not self._assumed_positions_match(script_park, settings_park):
+            self._set_assumed_position(
+                x=script_park["x"],
+                y=script_park["y"],
+                z=script_park["z"],
+            )
+
+        return script_park
+
+    def _get_assumed_position(self):
+        return self._sync_assumed_position_settings_from_scripts()
+
     def _set_assumed_position(self, *, x, y, z):
         zmax = self._get_printer_zmax()
         clamped_z = max(0.0, float(z))
@@ -442,8 +522,8 @@ class OctoGoatPlugin(
             self._settings.set(["park_z_offset"], max(0.0, zmax - clamped_z))
         self._settings.save()
 
-    def _build_assumed_position_script(self):
-        park = self._get_assumed_position()
+    def _build_assumed_position_script(self, park=None):
+        park = park or self._get_assumed_position_from_settings()
         return "\n".join(
             [
                 ASSUMED_POSITION_MARKER_START,
@@ -459,10 +539,10 @@ class OctoGoatPlugin(
             ]
         )
 
-    def _build_cancelled_shutdown_script(self):
+    def _build_cancelled_shutdown_script(self, park=None):
         return "\n".join(
             [
-                self._build_assumed_position_script(),
+                self._build_assumed_position_script(park=park),
                 "",
                 "M84",
                 "M104 T0 S0",
@@ -494,8 +574,9 @@ class OctoGoatPlugin(
             return merged + "\n\n" + script_block + "\n"
         return script_block + "\n"
 
-    def sync_assumed_position_scripts(self):
-        script_block = self._build_assumed_position_script()
+    def sync_assumed_position_scripts(self, park=None):
+        park = park or self._sync_assumed_position_settings_from_scripts()
+        script_block = self._build_assumed_position_script(park=park)
         done_script = self._settings.global_get(["scripts", "gcode", "afterPrintDone"]) or ""
 
         self._settings.global_set(
@@ -504,7 +585,7 @@ class OctoGoatPlugin(
         )
         self._settings.global_set(
             ["scripts", "gcode", "afterPrintCancelled"],
-            self._build_cancelled_shutdown_script() + "\n",
+            self._build_cancelled_shutdown_script(park=park) + "\n",
         )
 
         self._settings.global_save()
