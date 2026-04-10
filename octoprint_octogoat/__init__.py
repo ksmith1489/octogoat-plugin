@@ -551,6 +551,14 @@ class OctoGoatPlugin(
             ]
         )
 
+    def _save_global_settings(self):
+        settings_obj = getattr(self._settings, "settings", None)
+        if settings_obj is not None and hasattr(settings_obj, "save"):
+            settings_obj.save()
+            return
+
+        self._settings.save()
+
     def _merge_script_block(self, current_script, script_block, *, prepend=False):
         merged = current_script or ""
 
@@ -588,7 +596,7 @@ class OctoGoatPlugin(
             self._build_cancelled_shutdown_script(park=park) + "\n",
         )
 
-        self._settings.global_save()
+        self._save_global_settings()
         self._settings.set(["smart_park_enabled"], True)
         self._settings.save()
 
