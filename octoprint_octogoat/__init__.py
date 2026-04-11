@@ -25,11 +25,13 @@ ASSUMED_POSITION_BLOCK_RE = re.compile(
     + re.escape(ASSUMED_POSITION_MARKER_END),
     flags=re.S,
 )
-ASSUMED_POSITION_MOVE_RE = re.compile(
-    r"^\s*G(?:0|1)\d?\b[^\n;]*\bX\s*(?P<x>[+-]?(?:\d+(?:\.\d+)?|\.\d+))"
-    + r"[^\n;]*\bY\s*(?P<y>[+-]?(?:\d+(?:\.\d+)?|\.\d+))"
-    + r"[^\n;]*\bZ\s*(?P<z>[+-]?(?:\d+(?:\.\d+)?|\.\d+))",
+ASSUMED_POSITION_MOVE_LINE_RE = re.compile(
+    r"^\s*G(?:0|1)\d?\b(?P<args>[^\n;]*)",
     flags=re.I | re.M,
+)
+ASSUMED_POSITION_AXIS_RE = re.compile(
+    r"\b(?P<axis>[XYZ])\s*(?P<value>[+-]?(?:\d+(?:\.\d+)?|\.\d+))",
+    flags=re.I,
 )
 
 
@@ -448,15 +450,20 @@ class OctoGoatPlugin(
 
         block_match = ASSUMED_POSITION_BLOCK_RE.search(script_text)
         search_text = block_match.group(1) if block_match else script_text
-        move_match = ASSUMED_POSITION_MOVE_RE.search(search_text)
-        if not move_match:
-            return None
 
-        return dict(
-            x=round(float(move_match.group("x")), 3),
-            y=round(float(move_match.group("y")), 3),
-            z=round(float(move_match.group("z")), 3),
-        )
+        for move_match in ASSUMED_POSITION_MOVE_LINE_RE.finditer(search_text):
+            axes = {}
+            for axis_match in ASSUMED_POSITION_AXIS_RE.finditer(move_match.group("args")):
+                axes[axis_match.group("axis").lower()] = float(axis_match.group("value"))
+
+            if all(axis in axes for axis in ("x", "y", "z")):
+                return dict(
+                    x=round(axes["x"], 3),
+                    y=round(axes["y"], 3),
+                    z=round(axes["z"], 3),
+                )
+
+        return None
 
     def _assumed_positions_match(self, first, second):
         if not first or not second:

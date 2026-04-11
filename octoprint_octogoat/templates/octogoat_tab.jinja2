@@ -3,7 +3,7 @@
 
         <div class="octogoat-hero">
             <img class="octogoat-hero-art"
-                 src="/plugin/octogoat/static/img/octogoat_hero.svg"
+                 src="/plugin/octogoat/static/img/octogoat_hero.jpg"
                  alt="OctoGOAT hero art">
         </div>
 
@@ -15,14 +15,6 @@
                         data-target="#pricing-modal"
                         title="place holder">
                     Pricing/Plans
-                </button>
-
-                <button class="btn octogoat-nav-btn"
-                        type="button"
-                        data-toggle="modal"
-                        data-target="#assumed-position-modal"
-                        title="place holder">
-                    Assumed Position
                 </button>
 
                 <button class="btn octogoat-nav-btn"
@@ -165,7 +157,7 @@
             <div class="row-fluid">
                 <div class="span4">
                     <button class="btn btn-block octogoat-function-btn"
-                            data-bind="click: applyPark"
+                            data-bind="click: openAssumedPositionPrompt"
                             title="place holder">
                         1 - Assumed Position
                     </button>
@@ -241,59 +233,47 @@
         </div>
     </div>
 
-    <div id="assumed-position-modal"
+    <div id="assumed-position-confirm-modal"
          class="modal hide fade"
          tabindex="-1"
          role="dialog"
-         aria-labelledby="assumed-position-modal-label"
+         aria-labelledby="assumed-position-confirm-modal-label"
          aria-hidden="true">
         <div class="modal-header">
             <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-            <h3 id="assumed-position-modal-label">Assumed Position</h3>
+            <h3 id="assumed-position-confirm-modal-label">Assumed Position</h3>
         </div>
 
         <div class="modal-body">
-            <p class="octogoat-help-text">place holder</p>
+            <p class="octogoat-help-text">
+                To avoid crashes caused by homing octogoat inserts a gcode script that creates a safe rough
+                "place to start" position anytime a print finishes or is canceled. This coordinates can be
+                modified in gcode scripts section in octoprint settings. By pressing this button you are
+                acknowledging that you see the position of the toolhead and it is atleast close to the
+                coordinates displayed here:
+            </p>
 
-            <div class="row-fluid">
-                <div class="span4">
-                    <label>X =</label>
-                    <input type="number"
-                           step="0.01"
-                           class="input-block-level octogoat-input"
-                           data-bind="value: parkX, event: { change: saveAssumedPosition }"
-                           title="place holder">
-                </div>
-
-                <div class="span4">
-                    <label>Y =</label>
-                    <input type="number"
-                           step="0.01"
-                           class="input-block-level octogoat-input"
-                           data-bind="value: parkY, event: { change: saveAssumedPosition }"
-                           title="place holder">
-                </div>
-
-                <div class="span4">
-                    <label>Z =</label>
-                    <input type="number"
-                           step="0.01"
-                           class="input-block-level octogoat-input"
-                           data-bind="value: parkZ, event: { change: saveAssumedPosition }"
-                           title="place holder">
-                </div>
+            <div class="octogoat-datum-display" title="place holder">
+                Initial Kinematic State:
+                <span>X=<strong data-bind="text: parkX"></strong></span>
+                <span>Y=<strong data-bind="text: parkY"></strong></span>
+                <span>Z=<strong data-bind="text: parkZ"></strong></span>
             </div>
 
-            <div class="octogoat-help-text">
-                These values mirror the OctoGOAT park commands in OctoPrint's
-                <strong>after print job completes</strong> and
-                <strong>after print job is canceled</strong> GCODE scripts. Changes here update those scripts,
-                and manual script edits are reloaded back into this display after save.
-            </div>
+            <label class="checkbox octogoat-checkbox octogoat-bypass-checkbox">
+                <input type="checkbox" data-bind="checked: bypassAssumedPosition">
+                Bypass assumed position I have visually verified the printers current coordinate state.
+            </label>
         </div>
 
         <div class="modal-footer">
             <button class="btn" type="button" data-dismiss="modal">Close</button>
+            <button class="btn octogoat-function-btn"
+                    type="button"
+                    data-bind="click: applyPark"
+                    title="place holder">
+                Set Assumed Position
+            </button>
         </div>
     </div>
 

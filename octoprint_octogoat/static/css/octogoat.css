@@ -41,11 +41,13 @@
 
 .octogoat-hero-art {
     display: block;
-    width: min(100%, 980px);
+    width: 100%;
+    max-width: 980px;
     height: auto;
     max-height: 340px;
     margin: 0 auto;
-    filter: drop-shadow(0 10px 28px rgba(0, 0, 0, 0.35));
+    border-radius: 10px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
 }
 
 .octogoat-title-wrap {
@@ -448,6 +450,11 @@
     display: inline-block;
 }
 
+.octogoat-bypass-checkbox {
+    margin-top: 16px;
+    color: #ffd8a7;
+}
+
 .octogoat-download-btn {
     background: #f2a23e !important;
     border: 1px solid #d58722 !important;
@@ -543,39 +550,41 @@
         flex-direction: column;
     }
 }
-    .octogoat-action-btn{
-        white-space:normal;
-        line-height:1.2;
-     }
 
-    .octogoat-nav-btn,
-    .octogoat-function-btn,
-    .octogoat-action-btn,
-    .octogoat-resume-btn{
-     color:#000 !important;
-     }
+.octogoat-action-btn {
+    white-space: normal;
+    line-height: 1.2;
+}
 
-    .octogoat-warning-box{
-        background:#ffffff;
-        color:#d60000;
-        font-weight:800;
-        padding:14px;
-        margin:18px 0;
-        border-radius:8px;
-        text-align:center;
-        font-size:14px;
-        border:2px solid #d60000;
-        }
-    .octogoat-title-logo{
-        position:relative;
-        display:inline-block;
-    }
+.octogoat-nav-btn,
+.octogoat-function-btn,
+.octogoat-action-btn,
+.octogoat-resume-btn {
+    color: #000 !important;
+}
 
-    .octogoat-goat-overlay{
-        position:absolute;
-        left:-6px;
-        top:-10px;
-        width:52px;
-        height:52px;
-        pointer-events:none;
-    }
+.octogoat-warning-box {
+    background: #ffffff;
+    color: #d60000;
+    font-weight: 800;
+    padding: 14px;
+    margin: 18px 0;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 14px;
+    border: 2px solid #d60000;
+}
+
+.octogoat-title-logo {
+    position: relative;
+    display: inline-block;
+}
+
+.octogoat-goat-overlay {
+    position: absolute;
+    left: -6px;
+    top: -10px;
+    width: 52px;
+    height: 52px;
+    pointer-events: none;
+}

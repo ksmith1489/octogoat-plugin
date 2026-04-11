@@ -23,6 +23,7 @@ $(function () {
         self.resumeFileName = ko.observable("");
         self.motionAcknowledged = ko.observable(false);
         self.assumedPositionApplied = ko.observable(false);
+        self.bypassAssumedPosition = ko.observable(false);
 
         self.availableFiles = ko.observableArray([]);
         self.selectedServerFilePath = ko.observable("");
@@ -86,6 +87,7 @@ $(function () {
             self.datumZ("");
             self.previewText("");
             self.resumeFileName("");
+            self.bypassAssumedPosition(false);
             self.motionAcknowledged(false);
             self.assumedPositionApplied(false);
         }
@@ -308,7 +310,7 @@ $(function () {
         };
 
         self.loadStatus = function () {
-            api("status")
+            return api("status")
                 .done(function (resp) {
                     if (!resp || resp.ok !== true) {
                         return;
@@ -317,6 +319,12 @@ $(function () {
                     updateParkFields(resp.park);
                     applyCurrentFileFromStatus(resp.current_file);
                 });
+        };
+
+        self.openAssumedPositionPrompt = function () {
+            self.loadStatus().always(function () {
+                $("#assumed-position-confirm-modal").modal("show");
+            });
         };
 
         self.selectServerFile = function () {
@@ -406,6 +414,7 @@ $(function () {
                     }
 
                     self.resumeZ(resp.resume_z || "");
+                    self.bypassAssumedPosition(false);
                     self.assumedPositionApplied(false);
 
                     if (resp.datum) {
@@ -446,7 +455,9 @@ $(function () {
                         updateParkFields(resp.park);
                     }
 
+                    self.bypassAssumedPosition(false);
                     self.assumedPositionApplied(true);
+                    $("#assumed-position-confirm-modal").modal("hide");
                     notify("Assumed Position Set", "Toolhead reference position applied.", "success");
                 })
                 .fail(function (xhr) {
@@ -543,6 +554,15 @@ $(function () {
                     self.licenseValid(false);
                 });
         };
+
+        self.bypassAssumedPosition.subscribe(function (isBypassed) {
+            if (isBypassed) {
+                self.assumedPositionApplied(true);
+                return;
+            }
+
+            self.assumedPositionApplied(false);
+        });
 
         self.bindFilePicker = function () {
             $(document).off("change.octogoat", localFileInputSelector);
