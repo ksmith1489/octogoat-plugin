@@ -50,6 +50,46 @@
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
 }
 
+.octogoat-moonraker-control-row {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+    flex-wrap: wrap;
+    margin: 0 0 18px 0;
+}
+
+.octogoat-moonraker-toggle,
+.octogoat-moonraker-test-btn {
+    background: #ffd21f !important;
+    border: 2px solid #111111 !important;
+    border-radius: 10px;
+    color: #000000 !important;
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.2;
+    padding: 12px 16px;
+    text-transform: uppercase;
+    text-shadow: none !important;
+    box-shadow: 0 6px 0 #9c7a00;
+}
+
+.octogoat-moonraker-toggle {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin: 0;
+}
+
+.octogoat-moonraker-toggle input {
+    margin: 0;
+}
+
+.octogoat-moonraker-test-btn:hover,
+.octogoat-moonraker-test-btn:focus {
+    background: #ffe15a !important;
+    color: #000000 !important;
+}
+
 .octogoat-title-wrap {
     display: flex;
     align-items: center;
@@ -538,6 +578,11 @@
     }
 
     .octogoat-file-picker-btn {
+        width: 100%;
+    }
+
+    .octogoat-moonraker-toggle,
+    .octogoat-moonraker-test-btn {
         width: 100%;
     }
 

@@ -30,9 +30,97 @@
     <label class="control-label">Assumed Position</label>
     <div class="controls">
       <p class="help-block">
-        Assumed position coordinates are now managed from the OctoGoat tab under
-        <strong>Assumed Position</strong>.
+        In OctoPrint mode these coordinates are read from the OctoGOAT GCODE scripts.
       </p>
+    </div>
+  </div>
+
+  <hr>
+
+  <h3>Moonraker / Klipper Mode</h3>
+
+  <div class="control-group">
+    <label class="control-label">Moonraker URL</label>
+    <div class="controls">
+      <input type="text"
+             class="input-block-level"
+             placeholder="http://printer.local:7125"
+             data-bind="value: settings.plugins.octogoat.moonraker_url">
+      <p class="help-block">
+        Base URL for Moonraker. The front OctoGoat tab controls whether Moonraker mode is on or off.
+      </p>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label class="control-label">Moonraker API Key</label>
+    <div class="controls">
+      <input type="password"
+             class="input-block-level"
+             data-bind="value: settings.plugins.octogoat.moonraker_api_key">
+      <p class="help-block">
+        Optional. Required when Moonraker does not trust this OctoPrint host.
+      </p>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label class="control-label">Assumed Position cancel_print parking spot</label>
+    <div class="controls">
+      <div class="row-fluid">
+        <div class="span4">
+          <label>X</label>
+          <input type="number"
+                 step="0.01"
+                 class="input-block-level"
+                 data-bind="value: settings.plugins.octogoat.moonraker_park_x">
+        </div>
+
+        <div class="span4">
+          <label>Y</label>
+          <input type="number"
+                 step="0.01"
+                 class="input-block-level"
+                 data-bind="value: settings.plugins.octogoat.moonraker_park_y">
+        </div>
+
+        <div class="span4">
+          <label>Z</label>
+          <input type="number"
+                 step="0.01"
+                 class="input-block-level"
+                 data-bind="value: settings.plugins.octogoat.moonraker_park_z">
+        </div>
+      </div>
+
+      <p class="help-block">
+        Used by the Assumed Position button in Moonraker mode.
+      </p>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label class="control-label">Moonraker upload behavior</label>
+    <div class="controls">
+      <label class="checkbox">
+        <input type="checkbox"
+               data-bind="checked: settings.plugins.octogoat.moonraker_upload_and_print">
+        Upload and start the resume print when Resume Print is pressed
+      </label>
+      <p class="help-block">
+        If unchecked, Resume Print uploads the generated _resume.gcode to Moonraker but does not start it.
+      </p>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label class="control-label">Moonraker timeout seconds</label>
+    <div class="controls">
+      <input type="number"
+             min="1"
+             step="1"
+             class="input-block-level"
+             data-bind="value: settings.plugins.octogoat.moonraker_timeout_seconds">
     </div>
   </div>
 </div>

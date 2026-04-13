@@ -7,6 +7,23 @@
                  alt="OctoGOAT hero art">
         </div>
 
+        <div class="octogoat-moonraker-control-row">
+            <label class="octogoat-moonraker-toggle"
+                   title="Moonraker/Klipper mode requires quick one time initial setup in OctoGoat settings">
+                <input type="checkbox"
+                       data-bind="checked: moonrakerMode, event: { change: setControlModeFromToggle }">
+                Moonraker/Klipper Mode:
+                <strong data-bind="text: moonrakerModeLabel"></strong>
+            </label>
+
+            <button class="btn octogoat-moonraker-test-btn"
+                    type="button"
+                    data-bind="click: testMoonraker"
+                    title="Test Moonraker connection using the URL and API key in OctoGoat settings.">
+                Test Connection
+            </button>
+        </div>
+
         <div class="octogoat-nav-row">
             <div class="octogoat-nav-left">
                 <button class="btn octogoat-nav-btn"

@@ -10,6 +10,11 @@ $(function () {
         self.licenseValid = ko.observable(false);
         self.measuredHeight = ko.observable("");
         self.alignmentSide = ko.observable("left");
+        self.controlMode = ko.observable("octoprint");
+        self.moonrakerMode = ko.observable(false);
+        self.moonrakerModeLabel = ko.computed(function () {
+            return self.moonrakerMode() ? "ON" : "OFF";
+        });
 
         self.resumeBuilt = ko.observable(false);
         self.resumeZ = ko.observable("");
@@ -77,6 +82,12 @@ $(function () {
             }
 
             return fallbackText;
+        }
+
+        function updateControlMode(mode) {
+            var normalized = mode === "moonraker" ? "moonraker" : "octoprint";
+            self.controlMode(normalized);
+            self.moonrakerMode(normalized === "moonraker");
         }
 
         function resetResumeState() {
@@ -316,8 +327,53 @@ $(function () {
                         return;
                     }
 
+                    updateControlMode(resp.control_mode);
                     updateParkFields(resp.park);
                     applyCurrentFileFromStatus(resp.current_file);
+                });
+        };
+
+        self.setControlModeFromToggle = function () {
+            var desiredMode = self.moonrakerMode() ? "moonraker" : "octoprint";
+
+            api("set_control_mode", {
+                control_mode: desiredMode
+            })
+                .done(function (resp) {
+                    if (!resp || resp.ok !== true) {
+                        notify("Error", resp && resp.error ? resp.error : "Control mode update failed", "error");
+                        self.loadStatus();
+                        return;
+                    }
+
+                    updateControlMode(resp.control_mode);
+                    updateParkFields(resp.park);
+                    self.bypassAssumedPosition(false);
+                    self.assumedPositionApplied(false);
+                    notify(
+                        "Control Mode",
+                        resp.moonraker_mode ? "Moonraker/Klipper mode enabled." : "OctoPrint mode enabled.",
+                        "success"
+                    );
+                })
+                .fail(function (xhr) {
+                    notify("Error", getAjaxErrorMessage(xhr, "Control mode update failed"), "error");
+                    self.loadStatus();
+                });
+        };
+
+        self.testMoonraker = function () {
+            api("test_moonraker")
+                .done(function (resp) {
+                    if (!resp || resp.ok !== true) {
+                        notify("Moonraker Test", resp && resp.error ? resp.error : "Moonraker connection failed", "error");
+                        return;
+                    }
+
+                    notify("Moonraker Connected", resp.message || "Moonraker connection succeeded.", "success");
+                })
+                .fail(function (xhr) {
+                    notify("Moonraker Test", getAjaxErrorMessage(xhr, "Moonraker connection failed"), "error");
                 });
         };
 
@@ -538,7 +594,7 @@ $(function () {
                         return;
                     }
 
-                    notify("OctoGOAT", "Resume sequence started", "success");
+                    notify("OctoGOAT", resp.message || "Resume sequence started", "success");
                 })
                 .fail(function (xhr) {
                     notify("Error", getAjaxErrorMessage(xhr, "Resume failed"), "error");
