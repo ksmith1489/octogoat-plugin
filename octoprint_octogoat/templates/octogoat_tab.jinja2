@@ -157,8 +157,8 @@
             </div>
 
             <div class="octogoat-warning-box">
-                *Warning! While possible to resume a failed print in seconds by simply clicking
-                "Set Assumed Position" and skipping to Resume Now, it is not recommended!
+                *Warning! While possible to resume a failed print in seconds by using an experienced
+                Step 1 option and skipping to Resume Now, it is not recommended!
                 <br><br>
                 Is it awesome? Yes, but a safe and precise resume only takes a couple more minutes.
                 <br><br>
@@ -172,27 +172,19 @@
             </div>
 
             <div class="row-fluid">
-                <div class="span4">
+                <div class="span6">
                     <button class="btn btn-block octogoat-function-btn"
-                            data-bind="click: openAssumedPositionPrompt"
-                            title="place holder">
-                        1 - Assumed Position
+                            data-bind="click: openSafeResumeHomingPrompt"
+                            title="Choose Safe Resume Homing, attest the current coordinates, or use saved assumed position coordinates.">
+                        1 - Safe Resume Homing
                     </button>
                 </div>
 
-                <div class="span4">
+                <div class="span6">
                     <button class="btn btn-block octogoat-function-btn"
                             data-bind="click: goToDatum"
-                            title="place holder">
+                            title="Move only X and Y to the selected alignment point.">
                         2 - Moving On To Perfection
-                    </button>
-                </div>
-
-                <div class="span4">
-                    <button class="btn btn-block octogoat-function-btn"
-                            data-bind="click: lockDatum"
-                            title="place holder">
-                        3 - True Alignment Complete
                     </button>
                 </div>
             </div>
@@ -250,47 +242,104 @@
         </div>
     </div>
 
-    <div id="assumed-position-confirm-modal"
+    <div id="safe-resume-homing-modal"
          class="modal hide fade"
          tabindex="-1"
          role="dialog"
-         aria-labelledby="assumed-position-confirm-modal-label"
+         aria-labelledby="safe-resume-homing-modal-label"
          aria-hidden="true">
         <div class="modal-header">
             <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-            <h3 id="assumed-position-confirm-modal-label">Assumed Position</h3>
+            <h3 id="safe-resume-homing-modal-label">Safe Resume Homing</h3>
         </div>
 
         <div class="modal-body">
-            <p class="octogoat-help-text">
-                To avoid crashes caused by homing octogoat inserts a gcode script that creates a safe rough
-                "place to start" position anytime a print finishes or is canceled. This coordinates can be
-                modified in gcode scripts section in octoprint settings. By pressing this button you are
-                acknowledging that you see the position of the toolhead and it is atleast close to the
-                coordinates displayed here:
-            </p>
+            <div class="octogoat-option-stack">
+                <label class="checkbox octogoat-checkbox octogoat-expert-option"
+                       title="Use this only when you have verified that the printer's current X, Y and Z coordinates are correct and safe for the resume workflow.">
+                    <input type="checkbox" data-bind="checked: attestCurrentCoordinates">
+                    I attest to my printer's current coordinate state
+                </label>
 
-            <div class="octogoat-datum-display" title="place holder">
-                Initial Kinematic State:
-                <span>X=<strong data-bind="text: parkX"></strong></span>
-                <span>Y=<strong data-bind="text: parkY"></strong></span>
-                <span>Z=<strong data-bind="text: parkZ"></strong></span>
+                <label class="checkbox octogoat-checkbox octogoat-expert-option"
+                       title="Use saved assumed position coordinates from OctoGoat settings. If your machine is at a known parking place, such as cancel_print, you can save those coordinates in settings and use them to get started. Only use this when you are confident those coordinates match the printer now.">
+                    <input type="checkbox" data-bind="checked: useAssumedPositionCoordinates">
+                    Use assumed position coordinates
+                </label>
+
+                <div class="octogoat-datum-display"
+                     title="Coordinates currently saved in OctoGoat settings for the assumed position option.">
+                    Saved Assumed Position:
+                    <span>X=<strong data-bind="text: parkX"></strong></span>
+                    <span>Y=<strong data-bind="text: parkY"></strong></span>
+                    <span>Z=<strong data-bind="text: parkZ"></strong></span>
+                </div>
+
+                <div class="octogoat-standard-option">
+                    <div class="octogoat-standard-label">Standard start</div>
+                    <button class="btn btn-large btn-block octogoat-action-btn"
+                            type="button"
+                            data-bind="click: applySafeResumeHoming"
+                            title="Set a safe fictitious Z coordinate, then home X and Y without faking X/Y.">
+                        Safe Resume Homing
+                    </button>
+                    <p class="octogoat-disclaimer"
+                       title="If unsure as to whether your printer is safe to home X and Y with a print still on the bed it is best to try it with no print on the bed and make sure its homing sequence would not crash into a failed print.">
+                        for common cartesian/corexy printers
+                    </p>
+                </div>
             </div>
-
-            <label class="checkbox octogoat-checkbox octogoat-bypass-checkbox">
-                <input type="checkbox" data-bind="checked: bypassAssumedPosition">
-                Bypass assumed position I have visually verified the printers current coordinate state.
-            </label>
         </div>
 
         <div class="modal-footer">
             <button class="btn" type="button" data-dismiss="modal">Close</button>
-            <button class="btn octogoat-function-btn"
-                    type="button"
-                    data-bind="click: applyPark"
-                    title="place holder">
-                Set Assumed Position
-            </button>
+        </div>
+    </div>
+
+    <div id="alignment-step-modal"
+         class="modal hide fade"
+         tabindex="-1"
+         role="dialog"
+         aria-labelledby="alignment-step-modal-label"
+         aria-hidden="true">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h3 id="alignment-step-modal-label">Moving On To Perfection</h3>
+        </div>
+
+        <div class="modal-body">
+            <p class="octogoat-critical-warning">
+                <strong>Very important:</strong> Do not use Z offset toggles to align Z. This throws off
+                the bed mesh and the resume will fail and may cause a crash. Also be careful not to press
+                the home all button positioned very close to the Z motion controller in Fluidd / Mainsail.
+                If you do, it happens, don't panic. Kill power or emergency stop as soon as possible and
+                begin again. Nothing is lost.
+            </p>
+
+            <div class="octogoat-failsafe-row">
+                <button class="btn octogoat-failsafe-btn"
+                        type="button"
+                        data-bind="click: resetAlignmentZ"
+                        title="For Klipper this sends SET_KINEMATIC_POSITION Z=200 SET_HOMED=Z. For Marlin this sends G92 Z200.">
+                    Out of bounds error? Need more room to align Z?... press here
+                </button>
+            </div>
+
+            <div class="octogoat-calibrated-action">
+                <p>
+                    Once nozzle is aligned to left/right most edge within a paper test of the top of the print press here
+                </p>
+                <button class="btn btn-large btn-block octogoat-function-btn"
+                        type="button"
+                        data-bind="click: lockDatum"
+                        title="Set the true alignment point coordinates and continue the resume workflow.">
+                    Position Calibrated
+                </button>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn" type="button" data-dismiss="modal">Close</button>
         </div>
     </div>
 

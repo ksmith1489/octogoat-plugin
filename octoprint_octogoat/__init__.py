@@ -20,19 +20,11 @@ ASSUMED_POSITION_MARKER_END = "; --- End OctoGOAT Assumed Position ---"
 LEGACY_MARKER_START = "; --- OctoGOAT Smart Park ---"
 LEGACY_MARKER_END = "; --- End OctoGOAT Smart Park ---"
 LOCAL_STORAGE = "local"
-ASSUMED_POSITION_BLOCK_RE = re.compile(
-    re.escape(ASSUMED_POSITION_MARKER_START)
-    + r"(.*?)"
-    + re.escape(ASSUMED_POSITION_MARKER_END),
-    flags=re.S,
-)
-ASSUMED_POSITION_MOVE_LINE_RE = re.compile(
-    r"^\s*G(?:0|1)\d?\b(?P<args>[^\n;]*)",
-    flags=re.I | re.M,
-)
-ASSUMED_POSITION_AXIS_RE = re.compile(
-    r"\b(?P<axis>[XYZ])\s*(?P<value>[+-]?(?:\d+(?:\.\d+)?|\.\d+))",
-    flags=re.I,
+PLUGIN_CANCEL_SHUTDOWN_COMMANDS = (
+    "M84",
+    "M104 T0 S0",
+    "M140 S0",
+    "M106 S0",
 )
 
 
@@ -66,6 +58,7 @@ class OctoGoatPlugin(
             moonraker_park_z=200.0,
             moonraker_upload_and_print=False,
             moonraker_timeout_seconds=8,
+            z_max_override_mm="",
         )
 
     def get_settings_restricted_paths(self):
@@ -104,9 +97,12 @@ class OctoGoatPlugin(
             set_control_mode=["control_mode"],
             test_moonraker=[],
             build_resume=["measured_height"],
+            safe_resume_homing=[],
+            apply_assumed_position=[],
             apply_park=[],
             set_assumed_position=["x", "y", "z"],
-            goto_datum=["x", "y", "z"],
+            goto_datum=["x", "y"],
+            reset_alignment_z=[],
             lock_datum=["x", "y", "z"],
             execute_resume=[],
             upload_resume_to_moonraker=[],
@@ -115,9 +111,9 @@ class OctoGoatPlugin(
     def on_after_startup(self):
         try:
             self._ensure_assumed_position_defaults()
-            self.sync_assumed_position_scripts()
+            self.cleanup_assumed_position_scripts()
         except Exception as e:
-            self._logger.error("Assumed position script sync failed: %s" % e)
+            self._logger.error("Assumed position startup cleanup failed: %s" % e)
 
         self._logger.info("OctoGOAT loaded successfully")
         self._logger.info("OctoGOAT plugin active")
@@ -257,6 +253,7 @@ class OctoGoatPlugin(
             self._resume_cache = result["resumed_text"]
             self._resume_source = source
             self._resume_filename = self._build_resume_filename(source)
+            self._last_measured_height = measured_height
 
             return dict(
                 ok=True,
@@ -272,7 +269,40 @@ class OctoGoatPlugin(
                 resume_file_name=self._resume_filename,
             )
 
-        if command == "apply_park":
+        if command == "safe_resume_homing":
+            try:
+                measured_height = float(data.get("measured_height"))
+            except Exception:
+                measured_height = getattr(self, "_last_measured_height", None)
+
+            safe_z_info = self._resolve_safe_resume_z(measured_height=measured_height)
+            safe_z = safe_z_info["z"]
+
+            if self._uses_klipper_commands():
+                commands = [
+                    "SET_KINEMATIC_POSITION Z={z} SET_HOMED=Z".format(
+                        z=self._format_gcode_value(safe_z)
+                    ),
+                    "G28 X Y",
+                ]
+            else:
+                commands = [
+                    "G92 Z{z}".format(z=self._format_gcode_value(safe_z)),
+                    "G28 X Y",
+                ]
+
+            self._send_gcode_commands(commands)
+            return dict(
+                ok=True,
+                safe_z=round(safe_z, 3),
+                safe_z_source=safe_z_info["source"],
+                message="Safe Resume Homing started. Z was set to {z} from {source}, then X/Y homing was requested.".format(
+                    z=self._format_gcode_value(safe_z),
+                    source=safe_z_info["source"],
+                ),
+            )
+
+        if command in ("apply_park", "apply_assumed_position"):
             if self._is_moonraker_mode():
                 park = self._get_moonraker_park_position()
                 cmd = "SET_KINEMATIC_POSITION X={x} Y={y} Z={z}".format(
@@ -281,7 +311,7 @@ class OctoGoatPlugin(
                     z=self._format_gcode_value(park["z"]),
                 )
                 self._moonraker_gcode(cmd)
-                return dict(ok=True, park=park)
+                return dict(ok=True, park=park, message="Assumed position coordinates applied.")
 
             firmware = self._settings.get(["firmware_type"])
             park = self._get_assumed_position()
@@ -299,7 +329,7 @@ class OctoGoatPlugin(
                 )
 
             self._printer.commands(cmd)
-            return dict(ok=True, park=park)
+            return dict(ok=True, park=park, message="Assumed position coordinates applied.")
 
         if command == "set_assumed_position":
             try:
@@ -311,28 +341,30 @@ class OctoGoatPlugin(
 
             self._set_assumed_position(x=x, y=y, z=z)
             park = self._get_assumed_position_from_settings()
-            self.sync_assumed_position_scripts(park=park)
             return dict(ok=True, park=park)
 
         if command == "goto_datum":
             x = float(data.get("x"))
             y = float(data.get("y"))
-            z = float(data.get("z"))
-            safe_hop = float(self._settings.get(["safe_z_hop"]) or 10.0)
             commands = [
                 "G90",
-                "G0 Z{z}".format(z=self._format_gcode_value(z + safe_hop)),
                 "G0 X{x} Y{y}".format(
                     x=self._format_gcode_value(x),
                     y=self._format_gcode_value(y),
                 ),
             ]
 
-            if self._is_moonraker_mode():
-                self._moonraker_gcode("\n".join(commands))
-            else:
-                self._printer.commands(commands)
+            self._send_gcode_commands(commands)
             return dict(ok=True)
+
+        if command == "reset_alignment_z":
+            if self._uses_klipper_commands():
+                commands = ["SET_KINEMATIC_POSITION Z=200 SET_HOMED=Z"]
+            else:
+                commands = ["G92 Z200"]
+
+            self._send_gcode_commands(commands)
+            return dict(ok=True, message="Z coordinate reset to 200 mm.")
 
         if command == "lock_datum":
             firmware = self._settings.get(["firmware_type"])
@@ -394,6 +426,17 @@ class OctoGoatPlugin(
     def _is_moonraker_mode(self):
         return self._get_control_mode() == "moonraker"
 
+    def _uses_klipper_commands(self):
+        firmware = str(self._settings.get(["firmware_type"]) or "").strip().lower()
+        return self._is_moonraker_mode() or firmware == "klipper"
+
+    def _send_gcode_commands(self, commands):
+        if self._is_moonraker_mode():
+            self._moonraker_gcode("\n".join(commands))
+            return
+
+        self._printer.commands(commands)
+
     def _get_float_setting(self, path, default):
         try:
             return float(self._settings.get(path))
@@ -422,6 +465,20 @@ class OctoGoatPlugin(
 
     def _get_moonraker_timeout(self):
         return max(1.0, self._get_float_setting(["moonraker_timeout_seconds"], 8.0))
+
+    def _get_z_max_override(self):
+        value = self._settings.get(["z_max_override_mm"])
+        if value in ("", None):
+            return None
+
+        try:
+            zmax = float(value)
+        except Exception:
+            return None
+
+        if zmax > 0:
+            return zmax
+        return None
 
     def _get_moonraker_base_url(self):
         base_url = str(self._settings.get(["moonraker_url"]) or "").strip()
@@ -503,6 +560,34 @@ class OctoGoatPlugin(
             raise ValueError("Moonraker returned an unexpected /server/info response.")
         return result
 
+    def _moonraker_toolhead_zmax(self):
+        try:
+            result = self._moonraker_request("GET", "/printer/objects/query?toolhead")
+        except Exception:
+            return None
+
+        if not isinstance(result, dict):
+            return None
+
+        status = result.get("status") or {}
+        toolhead = status.get("toolhead") or {}
+        axis_maximum = toolhead.get("axis_maximum")
+        zmax = None
+
+        if isinstance(axis_maximum, dict):
+            zmax = axis_maximum.get("z") or axis_maximum.get("Z")
+        elif isinstance(axis_maximum, (list, tuple)) and len(axis_maximum) >= 3:
+            zmax = axis_maximum[2]
+
+        try:
+            zmax = float(zmax)
+        except Exception:
+            return None
+
+        if zmax > 0:
+            return zmax
+        return None
+
     def _moonraker_require_klippy_connected(self):
         info = self._moonraker_server_info()
         if info.get("klippy_connected") is not True:
@@ -528,7 +613,8 @@ class OctoGoatPlugin(
             message = str(e)
             if "SET_KINEMATIC_POSITION" in script and "force_move" not in message.lower():
                 message += (
-                    " If Klipper rejects SET_KINEMATIC_POSITION, add [force_move] "
+                    " If Klipper rejects SET_KINEMATIC_POSITION, enable force_move "
+                    "in your printer UI/settings, or add [force_move] "
                     "enable_force_move: True to printer.cfg and restart Klipper."
                 )
             raise ValueError(message)
@@ -666,6 +752,36 @@ class OctoGoatPlugin(
 
         return None
 
+    def _get_measured_height_fallback_z(self, measured_height=None):
+        try:
+            measured_height = float(measured_height)
+        except Exception:
+            measured_height = None
+
+        if measured_height is not None and measured_height > 0:
+            return measured_height + 200.0
+
+        return 450.0
+
+    def _resolve_safe_resume_z(self, measured_height=None):
+        if self._is_moonraker_mode():
+            zmax = self._moonraker_toolhead_zmax()
+            if zmax is not None:
+                return dict(z=zmax, source="Moonraker toolhead.axis_maximum.z")
+        else:
+            zmax = self._get_printer_zmax()
+            if zmax is not None:
+                return dict(z=zmax, source="OctoPrint printer profile")
+
+        override_zmax = self._get_z_max_override()
+        if override_zmax is not None:
+            return dict(z=override_zmax, source="z_max_override_mm")
+
+        return dict(
+            z=self._get_measured_height_fallback_z(measured_height=measured_height),
+            source="measured print height + 200 mm",
+        )
+
     def _get_default_assumed_position_z(self):
         zmax = self._get_printer_zmax()
         if zmax is not None:
@@ -706,77 +822,8 @@ class OctoGoatPlugin(
             z=round(park_z, 3),
         )
 
-    def _parse_assumed_position_from_script(self, script_text):
-        if not isinstance(script_text, str) or not script_text.strip():
-            return None
-
-        block_match = ASSUMED_POSITION_BLOCK_RE.search(script_text)
-        search_text = block_match.group(1) if block_match else script_text
-
-        for move_match in ASSUMED_POSITION_MOVE_LINE_RE.finditer(search_text):
-            axes = {}
-            for axis_match in ASSUMED_POSITION_AXIS_RE.finditer(move_match.group("args")):
-                axes[axis_match.group("axis").lower()] = float(axis_match.group("value"))
-
-            if all(axis in axes for axis in ("x", "y", "z")):
-                return dict(
-                    x=round(axes["x"], 3),
-                    y=round(axes["y"], 3),
-                    z=round(axes["z"], 3),
-                )
-
-        return None
-
-    def _assumed_positions_match(self, first, second):
-        if not first or not second:
-            return False
-
-        return (
-            round(float(first.get("x", 0.0)), 3) == round(float(second.get("x", 0.0)), 3)
-            and round(float(first.get("y", 0.0)), 3) == round(float(second.get("y", 0.0)), 3)
-            and round(float(first.get("z", 0.0)), 3) == round(float(second.get("z", 0.0)), 3)
-        )
-
-    def _get_assumed_position_from_scripts(self, settings_park=None):
-        if settings_park is None:
-            settings_park = self._get_assumed_position_from_settings()
-
-        done_park = self._parse_assumed_position_from_script(
-            self._settings.global_get(["scripts", "gcode", "afterPrintDone"]) or ""
-        )
-        cancelled_park = self._parse_assumed_position_from_script(
-            self._settings.global_get(["scripts", "gcode", "afterPrintCancelled"]) or ""
-        )
-
-        if done_park and cancelled_park:
-            if self._assumed_positions_match(done_park, cancelled_park):
-                return cancelled_park
-            if self._assumed_positions_match(done_park, settings_park):
-                return cancelled_park
-            if self._assumed_positions_match(cancelled_park, settings_park):
-                return done_park
-            return cancelled_park
-
-        return cancelled_park or done_park
-
-    def _sync_assumed_position_settings_from_scripts(self):
-        settings_park = self._get_assumed_position_from_settings()
-        script_park = self._get_assumed_position_from_scripts(settings_park=settings_park)
-
-        if not script_park:
-            return settings_park
-
-        if not self._assumed_positions_match(script_park, settings_park):
-            self._set_assumed_position(
-                x=script_park["x"],
-                y=script_park["y"],
-                z=script_park["z"],
-            )
-
-        return script_park
-
     def _get_assumed_position(self):
-        return self._sync_assumed_position_settings_from_scripts()
+        return self._get_assumed_position_from_settings()
 
     def _set_assumed_position(self, *, x, y, z):
         zmax = self._get_printer_zmax()
@@ -791,35 +838,6 @@ class OctoGoatPlugin(
             self._settings.set(["park_z_offset"], max(0.0, zmax - clamped_z))
         self._settings.save()
 
-    def _build_assumed_position_script(self, park=None):
-        park = park or self._get_assumed_position_from_settings()
-        return "\n".join(
-            [
-                ASSUMED_POSITION_MARKER_START,
-                "G91",
-                "G0 Z10",
-                "G90",
-                "G0 X{x} Y{y} Z{z}".format(
-                    x=self._format_gcode_value(park["x"]),
-                    y=self._format_gcode_value(park["y"]),
-                    z=self._format_gcode_value(park["z"]),
-                ),
-                ASSUMED_POSITION_MARKER_END,
-            ]
-        )
-
-    def _build_cancelled_shutdown_script(self, park=None):
-        return "\n".join(
-            [
-                self._build_assumed_position_script(park=park),
-                "",
-                "M84",
-                "M104 T0 S0",
-                "M140 S0",
-                "M106 S0",
-            ]
-        )
-
     def _save_global_settings(self):
         settings_obj = getattr(self._settings, "settings", None)
         if settings_obj is not None and hasattr(settings_obj, "save"):
@@ -828,9 +846,9 @@ class OctoGoatPlugin(
 
         self._settings.save()
 
-    def _merge_script_block(self, current_script, script_block, *, prepend=False):
-        merged = current_script or ""
-
+    def _strip_managed_script_blocks(self, current_script):
+        cleaned = current_script or ""
+        removed = False
         for start_marker, end_marker in (
             (ASSUMED_POSITION_MARKER_START, ASSUMED_POSITION_MARKER_END),
             (LEGACY_MARKER_START, LEGACY_MARKER_END),
@@ -839,34 +857,46 @@ class OctoGoatPlugin(
                 re.escape(start_marker) + r".*?" + re.escape(end_marker) + r"\s*",
                 flags=re.S,
             )
-            merged = pattern.sub("", merged)
+            cleaned, count = pattern.subn("", cleaned)
+            removed = removed or count > 0
 
-        merged = merged.strip()
-        if prepend:
-            if merged:
-                return script_block + "\n\n" + merged + "\n"
-            return script_block + "\n"
+        cleaned = cleaned.strip()
+        return (cleaned + "\n" if cleaned else ""), removed
 
-        if merged:
-            return merged + "\n\n" + script_block + "\n"
-        return script_block + "\n"
+    def _script_only_plugin_cancel_shutdown(self, script_text):
+        command_lines = []
+        for line in (script_text or "").splitlines():
+            command = line.split(";", 1)[0].strip()
+            if not command:
+                continue
+            command_lines.append(re.sub(r"\s+", " ", command.upper()))
 
-    def sync_assumed_position_scripts(self, park=None):
-        park = park or self._sync_assumed_position_settings_from_scripts()
-        script_block = self._build_assumed_position_script(park=park)
+        if not command_lines:
+            return False
+
+        return all(command in PLUGIN_CANCEL_SHUTDOWN_COMMANDS for command in command_lines)
+
+    def cleanup_assumed_position_scripts(self):
         done_script = self._settings.global_get(["scripts", "gcode", "afterPrintDone"]) or ""
+        cancelled_script = self._settings.global_get(["scripts", "gcode", "afterPrintCancelled"]) or ""
+        cleaned_done, done_removed = self._strip_managed_script_blocks(done_script)
+        cleaned_cancelled, cancelled_removed = self._strip_managed_script_blocks(cancelled_script)
 
-        self._settings.global_set(
-            ["scripts", "gcode", "afterPrintDone"],
-            self._merge_script_block(done_script, script_block),
-        )
-        self._settings.global_set(
-            ["scripts", "gcode", "afterPrintCancelled"],
-            self._build_cancelled_shutdown_script(park=park) + "\n",
-        )
+        if cancelled_removed and self._script_only_plugin_cancel_shutdown(cleaned_cancelled):
+            cleaned_cancelled = ""
 
-        self._save_global_settings()
-        self._settings.set(["smart_park_enabled"], True)
+        changed = False
+        if done_removed and cleaned_done != done_script:
+            self._settings.global_set(["scripts", "gcode", "afterPrintDone"], cleaned_done)
+            changed = True
+        if cancelled_removed and cleaned_cancelled != cancelled_script:
+            self._settings.global_set(["scripts", "gcode", "afterPrintCancelled"], cleaned_cancelled)
+            changed = True
+
+        if changed:
+            self._save_global_settings()
+
+        self._settings.set(["smart_park_enabled"], False)
         self._settings.save()
 
     def _format_gcode_value(self, value):

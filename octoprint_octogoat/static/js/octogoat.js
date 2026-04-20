@@ -27,8 +27,10 @@ $(function () {
         self.previewText = ko.observable("");
         self.resumeFileName = ko.observable("");
         self.motionAcknowledged = ko.observable(false);
-        self.assumedPositionApplied = ko.observable(false);
-        self.bypassAssumedPosition = ko.observable(false);
+        self.safeStartApplied = ko.observable(false);
+        self.attestCurrentCoordinates = ko.observable(false);
+        self.useAssumedPositionCoordinates = ko.observable(false);
+        self.safeResumeHomingStatus = ko.observable("");
 
         self.availableFiles = ko.observableArray([]);
         self.selectedServerFilePath = ko.observable("");
@@ -41,7 +43,7 @@ $(function () {
         self.userSelectedFile = false;
 
         self.canResume = ko.computed(function () {
-            return self.resumeBuilt() && self.motionAcknowledged() && self.assumedPositionApplied();
+            return self.resumeBuilt() && self.motionAcknowledged() && self.safeStartApplied();
         });
 
         self.canDownloadResume = ko.computed(function () {
@@ -98,9 +100,11 @@ $(function () {
             self.datumZ("");
             self.previewText("");
             self.resumeFileName("");
-            self.bypassAssumedPosition(false);
+            self.attestCurrentCoordinates(false);
+            self.useAssumedPositionCoordinates(false);
+            self.safeResumeHomingStatus("");
             self.motionAcknowledged(false);
-            self.assumedPositionApplied(false);
+            self.safeStartApplied(false);
         }
 
         function isSupportedGcodeName(name) {
@@ -348,8 +352,9 @@ $(function () {
 
                     updateControlMode(resp.control_mode);
                     updateParkFields(resp.park);
-                    self.bypassAssumedPosition(false);
-                    self.assumedPositionApplied(false);
+                    self.attestCurrentCoordinates(false);
+                    self.useAssumedPositionCoordinates(false);
+                    self.safeStartApplied(false);
                     notify(
                         "Control Mode",
                         resp.moonraker_mode ? "Moonraker/Klipper mode enabled." : "OctoPrint mode enabled.",
@@ -377,9 +382,9 @@ $(function () {
                 });
         };
 
-        self.openAssumedPositionPrompt = function () {
+        self.openSafeResumeHomingPrompt = function () {
             self.loadStatus().always(function () {
-                $("#assumed-position-confirm-modal").modal("show");
+                $("#safe-resume-homing-modal").modal("show");
             });
         };
 
@@ -470,8 +475,10 @@ $(function () {
                     }
 
                     self.resumeZ(resp.resume_z || "");
-                    self.bypassAssumedPosition(false);
-                    self.assumedPositionApplied(false);
+                    self.attestCurrentCoordinates(false);
+                    self.useAssumedPositionCoordinates(false);
+                    self.safeResumeHomingStatus("");
+                    self.safeStartApplied(false);
 
                     if (resp.datum) {
                         self.datumX(resp.datum.x != null ? resp.datum.x : "");
@@ -499,11 +506,41 @@ $(function () {
                 });
         };
 
-        self.applyPark = function () {
-            api("apply_park")
+        self.applySafeResumeHoming = function () {
+            var measuredHeight = parseFloat(self.measuredHeight());
+
+            if (!measuredHeight || measuredHeight <= 0) {
+                notify("Input Error", "Measured height required", "error");
+                return;
+            }
+
+            api("safe_resume_homing", {
+                measured_height: measuredHeight
+            })
                 .done(function (resp) {
                     if (!resp || resp.ok !== true) {
-                        notify("Error", resp && resp.error ? resp.error : "Park command failed", "error");
+                        notify("Error", resp && resp.error ? resp.error : "Safe Resume Homing failed", "error");
+                        return;
+                    }
+
+                    self.attestCurrentCoordinates(false);
+                    self.useAssumedPositionCoordinates(false);
+                    self.safeStartApplied(true);
+                    self.safeResumeHomingStatus(resp.message || "Safe Resume Homing started.");
+                    $("#safe-resume-homing-modal").modal("hide");
+                    notify("Safe Resume Homing", resp.message || "X/Y homing started.", "success");
+                })
+                .fail(function (xhr) {
+                    notify("Error", getAjaxErrorMessage(xhr, "Safe Resume Homing failed"), "error");
+                });
+        };
+
+        self.applyAssumedPosition = function () {
+            api("apply_assumed_position")
+                .done(function (resp) {
+                    if (!resp || resp.ok !== true) {
+                        notify("Error", resp && resp.error ? resp.error : "Assumed position command failed", "error");
+                        self.useAssumedPositionCoordinates(false);
                         return;
                     }
 
@@ -511,17 +548,21 @@ $(function () {
                         updateParkFields(resp.park);
                     }
 
-                    self.bypassAssumedPosition(false);
-                    self.assumedPositionApplied(true);
-                    $("#assumed-position-confirm-modal").modal("hide");
-                    notify("Assumed Position Set", "Toolhead reference position applied.", "success");
+                    self.attestCurrentCoordinates(false);
+                    self.safeStartApplied(true);
+                    self.safeResumeHomingStatus(resp.message || "Assumed position coordinates applied.");
+                    $("#safe-resume-homing-modal").modal("hide");
+                    notify("Assumed Position", resp.message || "Toolhead reference position applied.", "success");
                 })
                 .fail(function (xhr) {
-                    notify("Error", getAjaxErrorMessage(xhr, "Park command failed"), "error");
+                    self.useAssumedPositionCoordinates(false);
+                    notify("Error", getAjaxErrorMessage(xhr, "Assumed position command failed"), "error");
                 });
         };
 
         self.goToDatum = function () {
+            $("#alignment-step-modal").modal("show");
+
             api("goto_datum", {
                 x: self.datumX(),
                 y: self.datumY(),
@@ -540,6 +581,21 @@ $(function () {
                 });
         };
 
+        self.resetAlignmentZ = function () {
+            api("reset_alignment_z")
+                .done(function (resp) {
+                    if (!resp || resp.ok !== true) {
+                        notify("Error", resp && resp.error ? resp.error : "Z reset failed", "error");
+                        return;
+                    }
+
+                    notify("Z Coordinate Reset", resp.message || "Z coordinate reset to 200 mm.", "success");
+                })
+                .fail(function (xhr) {
+                    notify("Error", getAjaxErrorMessage(xhr, "Z reset failed"), "error");
+                });
+        };
+
         self.lockDatum = function () {
             api("lock_datum", {
                 x: self.datumX(),
@@ -552,6 +608,7 @@ $(function () {
                         return;
                     }
 
+                    $("#alignment-step-modal").modal("hide");
                     notify("Alignment Locked", resp.message || "it is now safe to set nozzle temp", "success");
                 })
                 .fail(function (xhr) {
@@ -577,8 +634,8 @@ $(function () {
         };
 
         self.resumeNow = function () {
-            if (!self.assumedPositionApplied()) {
-                notify("Safety", "You must set the assumed position before resuming.", "notice");
+            if (!self.safeStartApplied()) {
+                notify("Safety", "Complete Safe Resume Homing, use assumed coordinates, or attest the current coordinate state before resuming.", "notice");
                 return;
             }
 
@@ -611,13 +668,30 @@ $(function () {
                 });
         };
 
-        self.bypassAssumedPosition.subscribe(function (isBypassed) {
-            if (isBypassed) {
-                self.assumedPositionApplied(true);
+        self.attestCurrentCoordinates.subscribe(function (isAttested) {
+            if (isAttested) {
+                self.useAssumedPositionCoordinates(false);
+                self.safeStartApplied(true);
+                self.safeResumeHomingStatus("Current coordinate state attested.");
                 return;
             }
 
-            self.assumedPositionApplied(false);
+            if (!self.useAssumedPositionCoordinates()) {
+                self.safeStartApplied(false);
+                self.safeResumeHomingStatus("");
+            }
+        });
+
+        self.useAssumedPositionCoordinates.subscribe(function (useAssumedPosition) {
+            if (useAssumedPosition) {
+                self.applyAssumedPosition();
+                return;
+            }
+
+            if (!self.attestCurrentCoordinates()) {
+                self.safeStartApplied(false);
+                self.safeResumeHomingStatus("");
+            }
         });
 
         self.bindFilePicker = function () {
