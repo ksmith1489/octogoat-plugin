@@ -906,8 +906,12 @@ class OctoGoatPlugin(
         return formatted
 
 
-__plugin_name__ = "OctoGOAT"
+__plugin_name__ = "OctoGoat"
 __plugin_version__ = "0.1.0"
+__plugin_author__ = "Lazarus / OctoGoat"
+__plugin_url__ = "https://YOURDOMAIN.COM/octogoat"
+__plugin_license__ = "Proprietary - See LICENSE.txt"
+__plugin_privacypolicy__ = "https://YOURDOMAIN.COM/privacy"
 __plugin_pythoncompat__ = ">=3.7,<4"
 
 

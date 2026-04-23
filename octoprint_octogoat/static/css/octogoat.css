@@ -483,6 +483,25 @@
     flex-wrap: wrap;
 }
 
+.octogoat-legal-links {
+    color: #6f6f6f;
+    font-size: 11px;
+    font-weight: 700;
+    margin: -6px 0 12px 0;
+    text-align: center;
+}
+
+.octogoat-legal-links a {
+    color: #8a8a8a;
+    text-decoration: none;
+}
+
+.octogoat-legal-links a:hover,
+.octogoat-legal-links a:focus {
+    color: #ffcf97;
+    text-decoration: underline;
+}
+
 .octogoat-checkbox {
     color: #e2f8ff;
     font-weight: 700;

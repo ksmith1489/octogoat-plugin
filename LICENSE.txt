@@ -1,0 +1,44 @@
+OctoGoat Proprietary Software License
+Copyright © 2026 Lazarus / OctoGoat. All rights reserved.
+
+Patent Pending.
+
+This software is licensed, not sold. Subject to your compliance with the
+applicable Terms of Service, Lazarus / OctoGoat grants you a limited,
+non-exclusive, non-transferable, non-sublicensable, revocable license to
+install and use this software solely for your own internal 3D printing use.
+
+You may not, and may not permit any third party to:
+1. copy, reproduce, distribute, publish, sublicense, lease, sell, rent, or
+   otherwise transfer the software except as expressly permitted;
+2. modify, adapt, translate, reverse engineer, decompile, disassemble, or
+   create derivative works for commercial reuse, except to the extent such a
+   restriction is prohibited by applicable law;
+3. remove, alter, or obscure any copyright, trademark, patent pending, or
+   other proprietary notices;
+4. use the software to build or offer a competing commercial product or
+   service based substantially on the software or underlying proprietary
+   methods;
+5. bypass, disable, or interfere with license validation or subscription
+   controls.
+
+The software is provided “AS IS” and “AS AVAILABLE,” without warranties of
+any kind, express or implied, to the fullest extent permitted by law,
+including without limitation implied warranties of merchantability, fitness
+for a particular purpose, title, and non-infringement.
+
+To the fullest extent permitted by law, Lazarus / OctoGoat shall not be
+liable for any indirect, incidental, special, consequential, exemplary, or
+punitive damages, or any loss of data, profits, revenue, business, goodwill,
+or use, arising out of or related to the software or its use.
+
+This license does not grant any right, title, or interest in any trademarks,
+service marks, logos, patents, patent applications, trade secrets, or other
+intellectual property except the limited right to use the software as
+expressly stated above.
+
+Use of cloud-connected functionality, including checkout, activation, and
+license validation, is also subject to the Terms of Service and Privacy Policy.
+
+For licensing questions, partnership inquiries, or OEM/manufacturer licensing,
+contact: support@YOURDOMAIN.COM

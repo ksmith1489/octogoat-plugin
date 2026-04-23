@@ -5,10 +5,10 @@ plugin_package = "octoprint_octogoat"
 plugin_name = "OctoGoat"
 plugin_version = "0.1.0"
 plugin_description = "Resumes, Realigns, Restores, Recovers, Failed prints easily, quickly and accurately  ."
-plugin_author = "OctoGOAT"
+plugin_author = "Lazarus / OctoGoat"
 plugin_author_email = "ksmith1489@protonmail.com"
-plugin_url = ""
-plugin_license = "AGPLv3"
+plugin_url = "https://YOURDOMAIN.COM/octogoat"
+plugin_license = "Proprietary - See LICENSE.txt"
 plugin_requires = ["requests"]
 additional_setup_parameters = {}
 
