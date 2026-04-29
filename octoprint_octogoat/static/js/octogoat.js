@@ -27,6 +27,7 @@ $(function () {
         self.previewText = ko.observable("");
         self.resumeFileName = ko.observable("");
         self.motionAcknowledged = ko.observable(false);
+        self.buildInProgress = ko.observable(false);
         self.safeStartApplied = ko.observable(false);
         self.attestCurrentCoordinates = ko.observable(false);
         self.useAssumedPositionCoordinates = ko.observable(false);
@@ -83,6 +84,10 @@ $(function () {
                 return xhr.responseText;
             }
 
+            if (xhr && xhr.status === 0) {
+                return fallbackText + " The connection was reset before OctoPrint replied.";
+            }
+
             return fallbackText;
         }
 
@@ -100,6 +105,7 @@ $(function () {
             self.datumZ("");
             self.previewText("");
             self.resumeFileName("");
+            self.buildInProgress(false);
             self.attestCurrentCoordinates(false);
             self.useAssumedPositionCoordinates(false);
             self.safeResumeHomingStatus("");
@@ -451,9 +457,16 @@ $(function () {
         self.buildResume = function () {
             var payload;
 
+            if (self.buildInProgress()) {
+                return;
+            }
+
             if (!self.validateInputs()) {
                 return;
             }
+
+            resetResumeState();
+            self.buildInProgress(true);
 
             payload = {
                 measured_height: parseFloat(self.measuredHeight()),
@@ -469,6 +482,8 @@ $(function () {
 
             api("build_resume", payload)
                 .done(function (resp) {
+                    self.buildInProgress(false);
+
                     if (!resp || !resp.ok) {
                         notify("Error", resp && resp.error ? resp.error : "Resume build failed", "error");
                         return;
@@ -502,7 +517,15 @@ $(function () {
                     notify("Alignment Ready", "Move printer to the selected side reference point and continue calibration.", "notice");
                 })
                 .fail(function (xhr) {
-                    notify("Error", getAjaxErrorMessage(xhr, "API request failed"), "error");
+                    self.buildInProgress(false);
+                    notify(
+                        "Error",
+                        getAjaxErrorMessage(
+                            xhr,
+                            "Resume build request failed. If you selected a large local GCODE file, wait a few seconds and try once."
+                        ),
+                        "error"
+                    );
                 });
         };
 

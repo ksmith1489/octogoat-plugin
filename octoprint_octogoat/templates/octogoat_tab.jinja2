@@ -137,10 +137,31 @@
             </div>
 
             <button class="btn btn-large btn-block octogoat-action-btn"
-                    data-bind="click: buildResume, enable: licenseValid()"
+                    data-bind="click: buildResume, enable: licenseValid() && !buildInProgress()"
                     title="Reconstruct safe resume GCODE using the selected file and measured height.">
                 RECONSTRUCT GCODE AND PROCEED TO CALIBRATE POSITION
             </button>
+        </div>
+
+        <div class="octogoat-card" data-bind="visible: buildInProgress() || resumeBuilt()">
+            <div class="octogoat-warning-box">
+                <div class="octogoat-warning-intro" data-bind="visible: buildInProgress()">
+                    Your safe _resume.GCODE is being calculated, This may take a few seconds.
+                    <br><br>
+                </div>
+                *Warning! While possible to resume a failed print in seconds by using an experienced
+                Step 1 option and skipping to Resume Now, it is not recommended!
+                <br><br>
+                Is it awesome? Yes, but a safe and precise resume only takes a couple more minutes.
+                <br><br>
+                If something doesn't look right you can always cut power and try again.
+                <br><br>
+                If the print is still on the bed, with OctoGoat it's not dead.
+                <br><br>
+                Be safe! Be kind! And know you are appreciated.
+                <br><br>
+                OctoGoat powered by Lazarus. Patent pending. All rights reserved.
+            </div>
         </div>
 
         <div class="octogoat-card" data-bind="visible: resumeBuilt()">
@@ -154,21 +175,6 @@
                     <span>Y=<strong data-bind="text: datumY"></strong></span>
                     <span>Z=<strong data-bind="text: datumZ"></strong></span>
                 </div>
-            </div>
-
-            <div class="octogoat-warning-box">
-                *Warning! While possible to resume a failed print in seconds by using an experienced
-                Step 1 option and skipping to Resume Now, it is not recommended!
-                <br><br>
-                Is it awesome? Yes, but a safe and precise resume only takes a couple more minutes.
-                <br><br>
-                If something doesn't look right you can always cut power and try again.
-                <br><br>
-                If the print is still on the bed, with OctoGoat it's not dead.
-                <br><br>
-                Be safe! Be kind! And know you are appreciated.
-                <br><br>
-                OctoGoat powered by Lazarus. Patent pending. All rights reserved.
             </div>
 
             <div class="row-fluid">

@@ -6,6 +6,7 @@ import re
 import time
 import uuid
 import io
+from urllib.parse import urlparse, urlunparse
 
 import flask
 import octoprint.plugin
@@ -14,7 +15,7 @@ import requests
 from .resume_engine import build_resumed_gcode
 
 
-WEEK_SECONDS = 7 * 24 * 60 * 60
+MONTH_SECONDS = 30 * 24 * 60 * 60
 ASSUMED_POSITION_MARKER_START = "; --- OctoGOAT Assumed Position ---"
 ASSUMED_POSITION_MARKER_END = "; --- End OctoGOAT Assumed Position ---"
 LEGACY_MARKER_START = "; --- OctoGOAT Smart Park ---"
@@ -199,7 +200,7 @@ class OctoGoatPlugin(
             validate_url = f"{engine_url}/validate"
             now = int(time.time())
 
-            if last_validated and (now - last_validated) < WEEK_SECONDS:
+            if last_validated and (now - last_validated) < MONTH_SECONDS:
                 return dict(valid=True)
 
             try:
@@ -221,7 +222,7 @@ class OctoGoatPlugin(
 
                 return dict(valid=is_valid)
             except Exception:
-                if last_validated and (now - last_validated) < WEEK_SECONDS:
+                if last_validated and (now - last_validated) < MONTH_SECONDS:
                     return dict(valid=True)
                 return dict(valid=False)
 
@@ -488,7 +489,31 @@ class OctoGoatPlugin(
         if "://" not in base_url:
             base_url = "http://" + base_url
 
-        return base_url.rstrip("/")
+        parsed = urlparse(base_url)
+        normalized_path = parsed.path or ""
+        try:
+            parsed_port = parsed.port
+        except ValueError:
+            raise ValueError("Moonraker URL has an invalid port. Check the URL in OctoGoat settings.")
+
+        if parsed_port is None and normalized_path in ("", "/"):
+            hostname = parsed.hostname or ""
+            if ":" in hostname and not hostname.startswith("["):
+                hostname = "[{hostname}]".format(hostname=hostname)
+
+            auth = ""
+            if parsed.username:
+                auth = parsed.username
+                if parsed.password:
+                    auth += ":" + parsed.password
+                auth += "@"
+
+            parsed = parsed._replace(netloc="{auth}{hostname}:7125".format(
+                auth=auth,
+                hostname=hostname,
+            ))
+
+        return urlunparse(parsed).rstrip("/")
 
     def _get_moonraker_headers(self):
         headers = {}

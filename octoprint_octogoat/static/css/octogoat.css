@@ -727,6 +727,12 @@
     border: 2px solid #d60000;
 }
 
+.octogoat-warning-intro {
+    display: block;
+    font-size: 16px;
+    font-weight: 900;
+}
+
 .octogoat-title-logo {
     position: relative;
     display: inline-block;
