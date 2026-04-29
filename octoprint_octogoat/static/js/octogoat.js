@@ -42,6 +42,8 @@ $(function () {
         self.isDraggingFile = ko.observable(false);
 
         self.userSelectedFile = false;
+        self.uploadedFileObject = null;
+        self.uploadedServerFilePath = "";
 
         self.canResume = ko.computed(function () {
             return self.resumeBuilt() && self.motionAcknowledged() && self.safeStartApplied();
@@ -73,6 +75,14 @@ $(function () {
 
         function getResumeDownloadUrl() {
             return getApiBaseUrl() + "plugin/octogoat?download_resume=1&_ts=" + Date.now();
+        }
+
+        function getRequestHeaders(method) {
+            if (OctoPrint && typeof OctoPrint.getRequestHeaders === "function") {
+                return OctoPrint.getRequestHeaders(method || "POST");
+            }
+
+            return {};
         }
 
         function getAjaxErrorMessage(xhr, fallbackText) {
@@ -135,6 +145,8 @@ $(function () {
             self.selectedFileLabel(label || path);
             self.uploadedGcodeText("");
             self.uploadedFileName("");
+            self.uploadedFileObject = null;
+            self.uploadedServerFilePath = "";
 
             if (isUserChoice) {
                 self.userSelectedFile = true;
@@ -145,12 +157,14 @@ $(function () {
             }
         }
 
-        function setSelectedUploadedFile(fileName, fileText) {
+        function setSelectedUploadedFile(file) {
             self.selectedSourceType("device");
             self.selectedServerFilePath("");
-            self.selectedFileLabel(fileName || "no file selected");
-            self.uploadedGcodeText(fileText || "");
-            self.uploadedFileName(fileName || "");
+            self.selectedFileLabel(file && file.name ? file.name : "no file selected");
+            self.uploadedGcodeText("");
+            self.uploadedFileName(file && file.name ? file.name : "");
+            self.uploadedFileObject = file || null;
+            self.uploadedServerFilePath = "";
             self.userSelectedFile = true;
             resetResumeState();
         }
@@ -165,6 +179,8 @@ $(function () {
             self.selectedFileLabel("no file selected");
             self.uploadedGcodeText("");
             self.uploadedFileName("");
+            self.uploadedFileObject = null;
+            self.uploadedServerFilePath = "";
 
             if (markAsUserChoice) {
                 self.userSelectedFile = true;
@@ -251,7 +267,7 @@ $(function () {
 
         function hasSelectedFile() {
             if (self.selectedSourceType() === "device") {
-                return !!self.uploadedGcodeText();
+                return !!self.uploadedFileObject;
             }
 
             if (self.selectedSourceType() === "octoprint") {
@@ -282,8 +298,6 @@ $(function () {
         }
 
         function readLocalFile(file) {
-            var reader;
-
             if (!file) {
                 return;
             }
@@ -293,14 +307,146 @@ $(function () {
                 return;
             }
 
-            reader = new FileReader();
-            reader.onload = function (event) {
-                setSelectedUploadedFile(file.name, event.target.result || "");
-            };
-            reader.onerror = function () {
-                notify("File Error", "Could not read the selected file.", "error");
-            };
-            reader.readAsText(file);
+            setSelectedUploadedFile(file);
+        }
+
+        function extractUploadedLocalPath(response, fallbackName) {
+            if (response && response.files && response.files.local) {
+                if (response.files.local.path) {
+                    return response.files.local.path;
+                }
+
+                if (response.files.local.name) {
+                    return response.files.local.name;
+                }
+            }
+
+            if (response && response.path) {
+                return response.path;
+            }
+
+            if (response && response.name) {
+                return response.name;
+            }
+
+            return fallbackName || "";
+        }
+
+        function uploadSelectedDeviceFile() {
+            var deferred = $.Deferred();
+            var file = self.uploadedFileObject;
+            var request;
+            var formData;
+
+            if (!file) {
+                deferred.reject({
+                    responseJSON: {
+                        error: "error, no file selected"
+                    }
+                });
+                return deferred.promise();
+            }
+
+            if (self.uploadedServerFilePath) {
+                deferred.resolve({
+                    path: self.uploadedServerFilePath
+                });
+                return deferred.promise();
+            }
+
+            if (OctoPrint.files && typeof OctoPrint.files.upload === "function") {
+                request = OctoPrint.files.upload("local", file);
+            } else {
+                formData = new FormData();
+                formData.append("file", file, file.name);
+                request = $.ajax({
+                    url: getApiBaseUrl() + "files/local",
+                    type: "POST",
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: getRequestHeaders("POST"),
+                    dataType: "json"
+                });
+            }
+
+            request
+                .done(function (response) {
+                    var path = extractUploadedLocalPath(response, file.name);
+
+                    if (!path) {
+                        deferred.reject({
+                            responseJSON: {
+                                error: "Device file upload succeeded but OctoPrint did not return a file path."
+                            }
+                        });
+                        return;
+                    }
+
+                    self.uploadedServerFilePath = path;
+                    deferred.resolve({
+                        path: path,
+                        response: response
+                    });
+                })
+                .fail(function (xhr) {
+                    deferred.reject(xhr);
+                });
+
+            return deferred.promise();
+        }
+
+        function handleBuildResumeSuccess(resp) {
+            if (!resp || !resp.ok) {
+                notify("Error", resp && resp.error ? resp.error : "Resume build failed", "error");
+                return;
+            }
+
+            self.resumeZ(resp.resume_z || "");
+            self.attestCurrentCoordinates(false);
+            self.useAssumedPositionCoordinates(false);
+            self.safeResumeHomingStatus("");
+            self.safeStartApplied(false);
+
+            if (resp.datum) {
+                self.datumX(resp.datum.x != null ? resp.datum.x : "");
+                self.datumY(resp.datum.y != null ? resp.datum.y : "");
+                self.datumZ(resp.datum.z != null ? resp.datum.z : "");
+            }
+
+            if (resp.park) {
+                updateParkFields(resp.park);
+            }
+
+            if (resp.file && resp.file.name) {
+                self.selectedFileLabel(resp.file.name);
+            }
+
+            self.resumeFileName(resp.resume_file_name || "octogoat_resume.gcode");
+            self.previewText(resp.preview ? resp.preview.join("\n") : "");
+            self.motionAcknowledged(false);
+            self.resumeBuilt(true);
+
+            notify("Alignment Ready", "Move printer to the selected side reference point and continue calibration.", "notice");
+        }
+
+        function requestBuildResume(payload) {
+            return api("build_resume", payload)
+                .done(function (resp) {
+                    self.buildInProgress(false);
+                    handleBuildResumeSuccess(resp);
+                })
+                .fail(function (xhr) {
+                    self.buildInProgress(false);
+                    notify(
+                        "Error",
+                        getAjaxErrorMessage(
+                            xhr,
+                            "Resume build request failed. If you selected a large local GCODE file, wait a few seconds and try once."
+                        ),
+                        "error"
+                    );
+                });
         }
 
         self.loadAvailableFiles = function () {
@@ -474,59 +620,27 @@ $(function () {
             };
 
             if (self.selectedSourceType() === "device") {
-                payload.uploaded_gcode_text = self.uploadedGcodeText();
-                payload.uploaded_file_name = self.uploadedFileName() || self.selectedFileLabel();
-            } else if (self.selectedSourceType() === "octoprint") {
+                uploadSelectedDeviceFile()
+                    .done(function (uploadInfo) {
+                        payload.file_path = uploadInfo.path;
+                        requestBuildResume(payload);
+                    })
+                    .fail(function (xhr) {
+                        self.buildInProgress(false);
+                        notify(
+                            "Error",
+                            getAjaxErrorMessage(xhr, "Device file upload failed"),
+                            "error"
+                        );
+                    });
+                return;
+            }
+
+            if (self.selectedSourceType() === "octoprint") {
                 payload.file_path = self.selectedServerFilePath();
             }
 
-            api("build_resume", payload)
-                .done(function (resp) {
-                    self.buildInProgress(false);
-
-                    if (!resp || !resp.ok) {
-                        notify("Error", resp && resp.error ? resp.error : "Resume build failed", "error");
-                        return;
-                    }
-
-                    self.resumeZ(resp.resume_z || "");
-                    self.attestCurrentCoordinates(false);
-                    self.useAssumedPositionCoordinates(false);
-                    self.safeResumeHomingStatus("");
-                    self.safeStartApplied(false);
-
-                    if (resp.datum) {
-                        self.datumX(resp.datum.x != null ? resp.datum.x : "");
-                        self.datumY(resp.datum.y != null ? resp.datum.y : "");
-                        self.datumZ(resp.datum.z != null ? resp.datum.z : "");
-                    }
-
-                    if (resp.park) {
-                        updateParkFields(resp.park);
-                    }
-
-                    if (resp.file && resp.file.name) {
-                        self.selectedFileLabel(resp.file.name);
-                    }
-
-                    self.resumeFileName(resp.resume_file_name || "octogoat_resume.gcode");
-                    self.previewText(resp.preview ? resp.preview.join("\n") : "");
-                    self.motionAcknowledged(false);
-                    self.resumeBuilt(true);
-
-                    notify("Alignment Ready", "Move printer to the selected side reference point and continue calibration.", "notice");
-                })
-                .fail(function (xhr) {
-                    self.buildInProgress(false);
-                    notify(
-                        "Error",
-                        getAjaxErrorMessage(
-                            xhr,
-                            "Resume build request failed. If you selected a large local GCODE file, wait a few seconds and try once."
-                        ),
-                        "error"
-                    );
-                });
+            requestBuildResume(payload);
         };
 
         self.applySafeResumeHoming = function () {
