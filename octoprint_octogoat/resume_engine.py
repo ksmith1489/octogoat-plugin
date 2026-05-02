@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 
 DEFAULT_Z_MATCH_TOL = 0.05
 DEFAULT_Z_FLOOR_TOL = 0.05
+EXTRUSION_EPSILON = 1e-9
 LAYER_HEIGHT_PATTERNS = (
     re.compile(r"(?i)^\s*;\s*layer[_ ]height\s*[:=]\s*([-+]?\d*\.?\d+)\s*$"),
     re.compile(r"(?i)^\s*;\s*layerheight\s*[:=]\s*([-+]?\d*\.?\d+)\s*$"),
@@ -50,15 +51,21 @@ def _is_motion(line: str) -> bool:
     return s.startswith("G0") or s.startswith("G1") or s.startswith("G2") or s.startswith("G3")
 
 
+def _is_linear_motion(line: str) -> bool:
+    s = line.lstrip().upper()
+    return s.startswith("G0") or s.startswith("G1")
+
+
 def is_real_printing_move(line: str) -> bool:
-    if not _is_motion(line):
+    if not _is_linear_motion(line):
         return False
     e = _extract_float_param(line, "E")
-    if e is None:
+    if e is None or float(e) <= EXTRUSION_EPSILON:
         return False
     x = _extract_float_param(line, "X")
     y = _extract_float_param(line, "Y")
-    return (x is not None) or (y is not None)
+    z = _extract_float_param(line, "Z")
+    return (x is not None) or (y is not None) or (z is not None)
 
 
 def _extract_z_comment(line: str) -> Optional[float]:
@@ -123,18 +130,11 @@ def infer_resume_z(print_height_mm: float, layer_height_mm: float) -> float:
 
 
 def infer_layer_height(original_gcode_text: str) -> float:
-    for raw in io.StringIO(original_gcode_text):
-        stripped = raw.strip()
-        for pattern in LAYER_HEIGHT_PATTERNS:
-            match = pattern.match(stripped)
-            if not match:
-                continue
-            try:
-                value = float(match.group(1))
-            except Exception:
-                continue
-            if value > 0:
-                return value
+    comment_values = _collect_layer_height_comment_values(original_gcode_text)
+    if comment_values:
+        counts = Counter(comment_values)
+        best_value, _ = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[0]
+        return float(best_value)
 
     layer_z_values = _collect_layer_z_values(original_gcode_text, printing_only=True)
     if len(layer_z_values) < 2:
@@ -215,8 +215,54 @@ def infer_true_print_height(
     )
 
 
+def _collect_layer_height_comment_values(original_gcode_text: str) -> List[float]:
+    values: List[float] = []
+
+    for raw in io.StringIO(original_gcode_text):
+        stripped = raw.strip()
+        for pattern in LAYER_HEIGHT_PATTERNS:
+            match = pattern.match(stripped)
+            if not match:
+                continue
+            try:
+                value = float(match.group(1))
+            except Exception:
+                continue
+            if value > 0:
+                values.append(round(value, 5))
+            break
+
+    return values
+
+
+def _is_confirmed_print_move(line: str, *, detected_mode: str, last_e_abs: float) -> bool:
+    code = _strip_comment(line)
+    if not _is_linear_motion(code):
+        return False
+
+    e_value = _extract_float_param(code, "E")
+    if e_value is None:
+        return False
+
+    has_motion = (
+        _extract_float_param(code, "X") is not None
+        or _extract_float_param(code, "Y") is not None
+        or _extract_float_param(code, "Z") is not None
+    )
+    if not has_motion:
+        return False
+
+    extrusion_delta = float(e_value)
+    if detected_mode == "absolute":
+        extrusion_delta = float(e_value) - float(last_e_abs)
+
+    return extrusion_delta > EXTRUSION_EPSILON
+
+
 def _collect_layer_z_values(original_gcode_text: str, *, printing_only: bool) -> List[float]:
     current_z: Optional[float] = None
+    detected_mode = "absolute"
+    last_e_abs = 0.0
     seen = set()
     ordered: List[float] = []
 
@@ -225,17 +271,41 @@ def _collect_layer_z_values(original_gcode_text: str, *, printing_only: bool) ->
         if zc is not None:
             current_z = float(zc)
 
-        if not _is_motion(raw):
-            continue
+        code = _strip_comment(raw)
+        up = code.upper() if code else ""
 
-        z = _extract_float_param(raw, "Z")
-        if z is not None:
-            current_z = float(z)
+        if up.startswith("M82"):
+            detected_mode = "absolute"
+        elif up.startswith("M83"):
+            detected_mode = "relative"
+
+        if _is_linear_motion(code):
+            z = _extract_float_param(code, "Z")
+            if z is not None:
+                current_z = float(z)
+
+        is_printing_move = _is_confirmed_print_move(
+            code,
+            detected_mode=detected_mode,
+            last_e_abs=last_e_abs,
+        )
+
+        if up.startswith("G92"):
+            e = _extract_float_param(code, "E")
+            if e is not None:
+                last_e_abs = float(e)
+        elif detected_mode == "absolute" and _is_motion(code):
+            e = _extract_float_param(code, "E")
+            if e is not None:
+                last_e_abs = float(e)
 
         if current_z is None or current_z <= 0:
             continue
 
-        if printing_only and not is_real_printing_move(raw):
+        if printing_only:
+            if not is_printing_move:
+                continue
+        elif not _is_linear_motion(code):
             continue
 
         rounded = round(current_z, 5)
@@ -265,7 +335,7 @@ def _collect_layer_points(
         if zc is not None:
             current_z = float(zc)
 
-        if not _is_motion(raw):
+        if not _is_linear_motion(raw):
             continue
 
         x = _extract_float_param(raw, "X")
@@ -388,7 +458,14 @@ def build_resumed_gcode(
             detected_mode = "absolute"
         elif up.startswith("M83"):
             detected_mode = "relative"
-        elif up.startswith("G92"):
+
+        is_printing_move = _is_confirmed_print_move(
+            code,
+            detected_mode=detected_mode,
+            last_e_abs=last_e_abs,
+        )
+
+        if up.startswith("G92"):
             e = _extract_float_param(code, "E")
             if e is not None:
                 last_e_abs = float(e)
@@ -397,7 +474,7 @@ def build_resumed_gcode(
             if e is not None:
                 last_e_abs = float(e)
 
-        if _is_motion(raw):
+        if _is_linear_motion(raw):
             x = _extract_float_param(raw, "X")
             if x is not None:
                 current_x = float(x)
@@ -415,7 +492,7 @@ def build_resumed_gcode(
                 last_motion_f = float(f)
 
         if current_z is not None and current_z >= (resume_z - z_match_tol):
-            if (not should_strip_line(raw)) and is_real_printing_move(raw):
+            if (not should_strip_line(raw)) and is_printing_move:
                 anchor_index = i
                 break
 
