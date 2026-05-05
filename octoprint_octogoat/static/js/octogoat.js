@@ -427,7 +427,7 @@ $(function () {
             self.motionAcknowledged(false);
             self.resumeBuilt(true);
 
-            notify("Alignment Ready", "Move printer to the selected side reference point and continue calibration.", "notice");
+            notify("Your safe _resume.gcode is ready", "True Alignment Point has been calculated.", "notice");
         }
 
         function requestBuildResume(payload) {
@@ -711,7 +711,7 @@ $(function () {
                         return;
                     }
 
-                    notify("Move Complete", "Toolhead moved to the alignment datum.", "success");
+                    notify("Your toolhead has been moved over the true alignment point and is ready for precision alignment.", "success");
                 })
                 .fail(function (xhr) {
                     notify("Error", getAjaxErrorMessage(xhr, "Move failed"), "error");
@@ -746,7 +746,7 @@ $(function () {
                     }
 
                     $("#alignment-step-modal").modal("hide");
-                    notify("Alignment Locked", resp.message || "it is now safe to set nozzle temp", "success");
+                    notify("Alignment Locked", resp.message || "True alignment point locked. You may now set the nozzle temperature.", "success");
                 })
                 .fail(function (xhr) {
                     notify("Error", getAjaxErrorMessage(xhr, "Lock failed"), "error");
