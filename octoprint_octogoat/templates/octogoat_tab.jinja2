@@ -9,7 +9,7 @@
 
         <div class="octogoat-moonraker-control-row">
             <label class="octogoat-moonraker-toggle"
-                   title="Moonraker/Klipper mode requires quick one time initial setup in OctoGoat settings">
+                   title="Moonraker/Klipper easy connect in octogoat settings with your printer's local IP ex 192.168.1.you know">
                 <input type="checkbox"
                        data-bind="checked: moonrakerMode, event: { change: setControlModeFromToggle }">
                 Moonraker/Klipper Mode:
@@ -31,7 +31,7 @@
                         data-toggle="modal"
                         data-target="#pricing-modal"
                         title="place holder">
-                    Pricing/Plans
+                    Path to saving time, $ and your failed print
                 </button>
 
                 <button class="btn octogoat-nav-btn"
@@ -39,14 +39,14 @@
                         data-toggle="modal"
                         data-target="#howto-modal"
                         title="place holder">
-                    How To
+                    How it works
                 </button>
 
                 <button class="btn octogoat-nav-btn"
                         type="button"
                         data-toggle="modal"
                         data-target="#contact-modal"
-                        title="place holder">
+                        title="the_real_octogoat@proton.me">
                     Contact
                 </button>
             </div>
@@ -66,10 +66,10 @@
 
         <div class="octogoat-card">
             <div class="octogoat-inputs-head">
-                <h4>Inputs</h4>
+                <h4>Select the GCODE file of the print to be saved</h4>
 
                 <div class="octogoat-file-selector">
-                    <div class="octogoat-file-selector-label">Selected GCODE File</div>
+                    <div class="octogoat-file-selector-label">You are about to save:</div>
 
                     <div class="octogoat-file-selected"
                          data-bind="text: selectedFileLabel"
@@ -117,7 +117,7 @@
                            class="input-block-level octogoat-input"
                            placeholder="22.0"
                            data-bind="value: measuredHeight"
-                           title="Measure the partial print from both sides and enter the lower value to the nearest 0.1 mm.">
+                           title="Measure the partial print on the left and right side and enter the lower value to the nearest 0.1 mm.">
                 </div>
 
                 <div class="span6">
@@ -125,7 +125,7 @@
 
                     <select class="input-block-level octogoat-input"
                             data-bind="value: alignmentSide"
-                            title="Choose the side used for the left or right alignment datum selection rule.">
+                            title="Choose which side of the print had the lowest value">
                         <option value="left">Left</option>
                         <option value="right">Right</option>
                     </select>
@@ -139,7 +139,7 @@
             <button class="btn btn-large btn-block octogoat-action-btn"
                     data-bind="click: buildResume, enable: licenseValid() && !buildInProgress()"
                     title="Reconstruct safe resume GCODE using the selected file and measured height.">
-                RECONSTRUCT GCODE AND PROCEED TO CALIBRATE POSITION
+                Click here for your safe _resume.GCODE and to begin precision alignment
             </button>
         </div>
 
@@ -149,18 +149,28 @@
                     Your safe _resume.GCODE is being calculated, This may take a few seconds.
                     <br><br>
                 </div>
-                *Warning! While possible to resume a failed print in seconds by using an experienced
-                Step 1 option and skipping to Resume Now, it is not recommended!
-                <br><br>
-                Is it awesome? Yes, but a safe and precise resume only takes a couple more minutes.
-                <br><br>
-                If something doesn't look right you can always cut power and try again.
-                <br><br>
-                If the print is still on the bed, with OctoGoat it's not dead.
-                <br><br>
-                Be safe! Be kind! And know you are appreciated.
-                <br><br>
-                OctoGoat powered by Lazarus. Patent pending. All rights reserved.
+                While waiting let's talk about the different ways to get your nozzle lined up to the print.
+                3 ways to start. 
+                 First one, if you run Marlin your machine may still be holding its coordinate state. Makes this easy af.
+                Since for this first step we don't need perfect, just a safe ballpark, we get more precise than homing 
+                on the next step so if your printer has held on to coordinate state all you need to do is check that
+                first box under "safe resume homing". *DO NOT TRUST THE GREYED OUUT COORDINATES IN FLUIDD/MAINSAIL FOR THIS*
+                  Second way: If you know or find out the coords. where your printer parks when you cancel_print, then 
+                you can enter those coords. in octogoat settings and save them. They will be displayed under "safe resume homing"
+                as your "assumed position" coords. Then you just click that second checkbox and octogoat will tell your printer 
+                that is where you are. 
+                *Don't tell nobody but if you are confident in your machines "assumed position" or its current coordinant state, 
+                you can skip the precision alignment and just set temps and hit resume now and go back to bed. 
+                  The last option is the easy fail safe "safe resume homing" which simply homes x and y and sets a temporary "safe_z"
+                  
+                    However you begin on the next step, when you hit that next button ocotgoat then moves the toolhead to the 
+                "true alignment point".  From there you use your motion commands to algn nozzle to that perfect left or 
+                right-most edge, and drop it down to paper-test perfect.  Then when you hit "position calibrated" Octogoat informs 
+                your printer of absolute coordinate reality, triangulating your printer to the partial print and to the newly 
+                constructed safe _resume.GCODE.  Way easier done than said. If your a noob or have any questions holler at me, 
+                I got you. Looks like your code is ready now.
+                
+                    Let's get you lined back up and watch this thing resume like it never missed a beat!
             </div>
         </div>
 
@@ -169,8 +179,8 @@
                 <h4>Calibrate Position</h4>
 
                 <div class="octogoat-datum-display"
-                     title="place holder">
-                    Datum / True Alignment Point:
+                     title="once lined up and locked in, this becomes absolute true coordinate reality">
+                    True Alignment Point:
                     <span>X=<strong data-bind="text: datumX"></strong></span>
                     <span>Y=<strong data-bind="text: datumY"></strong></span>
                     <span>Z=<strong data-bind="text: datumZ"></strong></span>
@@ -189,8 +199,8 @@
                 <div class="span6">
                     <button class="btn btn-block octogoat-function-btn"
                             data-bind="click: goToDatum"
-                            title="Move only X and Y to the selected alignment point.">
-                        2 - Moving On To Perfection
+                            title="this moves nozzle overtop and close to the precision alignment point.">
+                        2 - On to Precision Alignment
                     </button>
                 </div>
             </div>
@@ -220,16 +230,16 @@
 
                 <button class="btn btn-large octogoat-resume-btn"
                         data-bind="enable: canResume(), click: resumeNow"
-                        title="place holder">
+                        title="Your print resumes immediately unless adjusted in octogoat settings! make sure temps are set!">
                     Resume Print
                 </button>
             </div>
         </div>
 
         <div class="octogoat-legal-links">
-            <a href="https://YOURDOMAIN.COM/terms" target="_blank" rel="noopener noreferrer">Terms</a>
+            <a href="https://app.lazarus3dprint.com" target="_blank" rel="noopener noreferrer">Terms</a>
             <span aria-hidden="true">|</span>
-            <a href="https://YOURDOMAIN.COM/privacy" target="_blank" rel="noopener noreferrer">Privacy</a>
+            <a href="https://app.lazarus3dprint.com" target="_blank" rel="noopener noreferrer">Privacy</a>
         </div>
     </div>
 
@@ -268,13 +278,13 @@
         <div class="modal-body">
             <div class="octogoat-option-stack">
                 <label class="checkbox octogoat-checkbox octogoat-expert-option"
-                       title="Use this only when you have verified that the printer's current X, Y and Z coordinates are correct and safe for the resume workflow.">
+                       title="This option is mostly for Marlin users whose printer has not lost it's coordinate state. Klipper drops cooordinate state after a cancel printe even (greyed out coordinates in Fluidd/ mainsail UI will not work).">
                     <input type="checkbox" data-bind="checked: attestCurrentCoordinates">
-                    I attest to my printer's current coordinate state
+                    My printer already has a current coordinate state. (not for Klipper as greyed out coordinates are not established or trustworthy)
                 </label>
 
                 <label class="checkbox octogoat-checkbox octogoat-expert-option"
-                       title="Use saved assumed position coordinates from OctoGoat settings. If your machine is at a known parking place, such as cancel_print, you can save those coordinates in settings and use them to get started. Only use this when you are confident those coordinates match the printer now.">
+                       title="Use saved assumed position coordinates from OctoGoat settings. If your printer is at a known parking place, such as cancel_print, you can save those coordinates in octogoat settings and by checking the box octogoat will tell your printer where it is. (For my Klipper people)">
                     <input type="checkbox" data-bind="checked: useAssumedPositionCoordinates">
                     Use assumed position coordinates
                 </label>
@@ -292,12 +302,12 @@
                     <button class="btn btn-large btn-block octogoat-action-btn"
                             type="button"
                             data-bind="click: applySafeResumeHoming"
-                            title="Set a safe fictitious Z coordinate, then home X and Y without faking X/Y.">
+                            title="Does a normal homing of X and Y and temporarily sets a fake z for a high number until true z is established in next step.">
                         Safe Resume Homing
                     </button>
                     <p class="octogoat-disclaimer"
-                       title="If unsure as to whether your printer is safe to home X and Y with a print still on the bed it is best to try it with no print on the bed and make sure its homing sequence would not crash into a failed print.">
-                        for common cartesian/corexy printers
+                       title="Oddball printer? Unsure if safe to home x and y with print on the bed? Test beforehand while bed is clear with this command [G28 X Y].">
+                       Safe for most all common cartesian/corexy printers
                     </p>
                 </div>
             </div>
@@ -316,7 +326,7 @@
          aria-hidden="true">
         <div class="modal-header">
             <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-            <h3 id="alignment-step-modal-label">Moving On To Perfection</h3>
+            <h3 id="alignment-step-modal-label">Move on to precision alignment</h3>
         </div>
 
         <div class="modal-body">
@@ -324,8 +334,9 @@
                 <strong>Very important:</strong> Do not use Z offset toggles to align Z. This throws off
                 the bed mesh and the resume will fail and may cause a crash. Also be careful not to press
                 the home all button positioned very close to the Z motion controller in Fluidd / Mainsail.
-                If you do, it happens, don't panic. Kill power or emergency stop as soon as possible and
-                begin again. Nothing is lost.
+                If you do, it happens, don't panic. Kill power or emergency stop and begin again. No big 
+                deal. Also highly recommend to never use printer's touchpad.. ever.. especially for motion.
+                (It can get weird when it comes to mottion control on a touchpad).
             </p>
 
             <div class="octogoat-failsafe-row">
@@ -344,7 +355,7 @@
                 <button class="btn btn-large btn-block octogoat-function-btn"
                         type="button"
                         data-bind="click: lockDatum"
-                        title="Set the true alignment point coordinates and continue the resume workflow.">
+                        title="Once you are perfectly aligned hitting this button will lock in true coordinate postiton then followed by a safe z hop so you can warm up your nozzle without melting the print.">
                     Position Calibrated
                 </button>
             </div>
@@ -367,7 +378,19 @@
         </div>
 
         <div class="modal-body">
-            <p>PLACEHOLDER HOW-TO CONTENT</p>
+            <p>Super easy workflow even your first time, even if not experienced.  After you have went through checkout to recieve your 
+            share in billions of dollars worth of savings simply upload the file of the print that failed. Use your calipers to measure
+            the left and right side, note which is shorter, enter that measurment to the nearest 0.1mm Don't sweat it too much, (the tolerance is = to layer height) 
+            Ocotgoat will find the exact layer of failure as long as you are within the tolerance. Then pick which side that measurement came from
+            the left or right.  Hard part is over.  Now click the big button to get your safe _resume.GCODE and follow the simple alignment button 
+            instructions.  We have multiple ways for everyone to get lined up with just the push of a button once you set up the first time. Then 
+            you have the choice to move to the precision alignment point to get it more perfect than homing in no time or if you are experienced 
+            and know your printer you can skip straight to resume now.  So the flow is measure, click, click, resume. It is that easy!  And so 
+            satisfying to watch that nozzle go right back to the point of failure and continue you might start wanting your prints to fail like me.
+            just so to see how fast and accurate it can be.  Any dancing tacos that crap icecream that resemble any other dancing tacos that crap 
+            icecream is purely coincidental.  Thanks for having an IQ higher than a potatoe and choosing OctoGoat.  Save time, Save money, Save that 
+            print!  And shout out to Creality for making such garabage printers, that by having to rebuid them, gave me the knowledge to make
+            OctoGoat possible!.</p>
         </div>
 
         <div class="modal-footer">
@@ -387,7 +410,13 @@
         </div>
 
         <div class="modal-body">
-            <p>PLACEHOLDER CONTACT CONTENT</p>
+            <p>If you get stuck or have any questions feel free to ask Chat GPT.. that is all I will do.
+            Just kidding... kinda ... feel free to contact me at the_real_octogoat@proton.me or 
+            ksmith1489@protonmail.com with any questions, interest in collaborations, strategic partnerships,
+            or licensing information to use the Lazarus method and system for resuming a failed 
+            additive manufacturing in your company's product. Soon to be a standard for all additive 
+            manufactoring devices with fully automated upgraded versions already in the works.  
+            already in the works. i</p>
         </div>
 
         <div class="modal-footer">
