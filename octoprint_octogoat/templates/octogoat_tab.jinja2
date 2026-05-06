@@ -66,7 +66,7 @@
 
         <div class="octogoat-card">
             <div class="octogoat-inputs-head">
-                <h4>Select the GCODE file of the print to be saved</h4>
+                <h4>Upload/drag-n-drop original Gcode file</h4>
 
                 <div class="octogoat-file-selector">
                     <div class="octogoat-file-selector-label">You are about to save:</div>
@@ -139,7 +139,7 @@
             <button class="btn btn-large btn-block octogoat-action-btn"
                     data-bind="click: buildResume, enable: licenseValid() && !buildInProgress()"
                     title="Reconstruct safe resume GCODE using the selected file and measured height.">
-                Click here for your safe _resume.GCODE and to begin precision alignment
+                Calculate _resume.GCODE and find the precision alignment point
             </button>
         </div>
 
@@ -178,7 +178,7 @@
                 <h4>Calibrate Position</h4>
 
                 <div class="octogoat-datum-display"
-                     title="once lined up and locked in, this becomes absolute true coordinate reality">
+                     title="These coordinates will be locked in telling your printer that your are on the left most or right most point with nozzle paper test to the print.">
                     True Alignment Point:
                     <span>X=<strong data-bind="text: datumX"></strong></span>
                     <span>Y=<strong data-bind="text: datumY"></strong></span>
@@ -198,7 +198,7 @@
                 <div class="span6">
                     <button class="btn btn-block octogoat-function-btn"
                             data-bind="click: goToDatum"
-                            title="this moves nozzle overtop and close to the precision alignment point.">
+                            title="this will move nozzle over the precision alignment point.">
                         2 - On to Precision Alignment
                     </button>
                 </div>
@@ -335,7 +335,7 @@
                 the home all button positioned very close to the Z motion controller in Fluidd / Mainsail.
                 If you do, it happens, don't panic. Kill power or emergency stop and begin again. No big 
                 deal. Also highly recommend to never use printer's touchpad.. ever.. especially for motion.
-                (It can get weird when it comes to mottion control on a touchpad).
+                (It can get weird when it comes to motion control on a touchpad).
             </p>
 
             <div class="octogoat-failsafe-row">
@@ -377,19 +377,31 @@
         </div>
 
         <div class="modal-body">
-            <p>Super easy workflow even your first time, even if not experienced.  After you have went through checkout to recieve your 
-            share in billions of dollars worth of savings simply upload the file of the print that failed. Use your calipers to measure
-            the left and right side, note which is shorter, enter that measurment to the nearest 0.1mm Don't sweat it too much, (the tolerance is = to layer height) 
-            Ocotgoat will find the exact layer of failure as long as you are within the tolerance. Then pick which side that measurement came from
-            the left or right.  Hard part is over.  Now click the big button to get your safe _resume.GCODE and follow the simple alignment button 
-            instructions.  We have multiple ways for everyone to get lined up with just the push of a button once you set up the first time. Then 
-            you have the choice to move to the precision alignment point to get it more perfect than homing in no time or if you are experienced 
-            and know your printer you can skip straight to resume now.  So the flow is measure, click, click, resume. It is that easy!  And so 
-            satisfying to watch that nozzle go right back to the point of failure and continue you might start wanting your prints to fail like me.
-            just so to see how fast and accurate it can be.  Any dancing tacos that crap icecream that resemble any other dancing tacos that crap 
-            icecream is purely coincidental.  Thanks for having an IQ higher than a potatoe and choosing OctoGoat.  Save time, Save money, Save that 
-            print!  And shout out to Creality for making such garabage printers, that by having to rebuid them, gave me the knowledge to make
-            OctoGoat possible!.</p>
+            <p>Welcome and thank you for helping to save millions of tons of wasted filament with OctoGOAT. 
+            Step 1 select the original GCODE file.  Can be from octoprint, your device, drag and drop is enabled.
+            Step 2 measure the height of the partial print you wish to save on the left and right-most point.
+            Enter the lowest of the two measurements to the nearest 0.1mm.Tolerance = layer height.
+            Select "calculate _resume.gcode" 
+            Select "safe resume homing" there you will see two check boxes.  The first is for Marlin users whose 
+            printers have not lost its coordinate state.  The second is for Klipper users who know where ther printer
+            parks after CANCEL_PRINT event and those coordinates are to be saved in the octogoat settings.  
+            Then for most beginers and first time users there is the safe resume homing which homes x and y and sets
+            a safe_z temporarily to unlock motion control.  Then on to precision alignment which can be skipped if you
+            selected one of the 2 check bbxes.  IF you used safe resume homeing than precision alignment must be done.
+            Use your UI motion controls (DO NOT USE Z OFFSET CONTROLS FOR ALIGNMETN) to line your nozzle up to within 
+            paper test of the print and make sure it is on exactly the leftmost or right most edge. 
+            Once you are on the edge within a paper test lock those coordinates in by selecting postion calibrated.  
+            This will also raise the nozzle off of the print so you can begin heating your nozzle. Once your temperatures
+            are correct affirm by checking the box, and you have a choice to download your resume.gcode or 
+            select "Resume Now" and your printer will begin right away, there is no ritual before hand it goes straight
+            to work so be ready.  IF something doesn't look right remember you can always kill power make an
+            adjustment and try again. IF you want to get all fancy with it you might want to slow down that first layer,
+            increase the temps a bit, maybe increase the flow,  Personally I pull a file, take a measurement, click the 
+            assumed postioin checkbox and then resume now and go back to bed without even fully waking up and its fine.
+            One more thing DON'T USE PRINTER'S TOUCHPAD'S FOR ANYTHING ... EVER BUT ESPECIALLY WHILE RESUMING.  
+            
+            
+             </p>
         </div>
 
         <div class="modal-footer">
@@ -409,13 +421,13 @@
         </div>
 
         <div class="modal-body">
-            <p>If you get stuck or have any questions feel free to ask Chat GPT.. that is all I will do.
+            <p>If you get stuck or have any questions feel free to ask you favorite LLM.
             Just kidding... kinda ... feel free to contact me at the_real_octogoat@proton.me or 
             ksmith1489@protonmail.com with any questions, interest in collaborations, strategic partnerships,
             or licensing information to use the Lazarus method and system for resuming a failed 
             additive manufacturing in your company's product. Soon to be a standard for all additive 
             manufactoring devices with fully automated upgraded versions already in the works.  
-            already in the works. i</p>
+            </p>
         </div>
 
         <div class="modal-footer">
