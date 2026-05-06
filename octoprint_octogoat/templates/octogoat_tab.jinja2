@@ -3,7 +3,7 @@
 
         <div class="octogoat-hero">
             <img class="octogoat-hero-art"
-                 src="/plugin/octogoat/static/img/octogoat_hero.jpg"
+                 src="/plugin/octogoat/static/img/octogoat_hero.png"
                  alt="OctoGOAT hero art">
         </div>
 
@@ -31,7 +31,7 @@
                         data-toggle="modal"
                         data-target="#pricing-modal"
                         title="place holder">
-                    Path to saving time, $ and your failed print
+                    Start here to save $$$
                 </button>
 
                 <button class="btn octogoat-nav-btn"
@@ -152,22 +152,21 @@
                 While waiting let's talk about the different ways to get your nozzle lined up to the print.
                 3 ways to start. 
                  First one, if you run Marlin your machine may still be holding its coordinate state. Makes this easy af.
-                Since for this first step we don't need perfect, just a safe ballpark, we get more precise than homing 
-                on the next step so if your printer has held on to coordinate state all you need to do is check that
-                first box under "safe resume homing". *DO NOT TRUST THE GREYED OUUT COORDINATES IN FLUIDD/MAINSAIL FOR THIS*
+                Since for this first step we don't need perfect, just a safe ballpark, Even if toolhead snagged or skipped
+                it's ok we'll get it tight on the next step. So in that case all you need to do is check that
+                first box under "safe resume homing". *DO NOT TRUST THE GRAYED OUT COORDINATES IN FLUIDD/MAINSAIL*
                   Second way: If you know or find out the coords. where your printer parks when you cancel_print, then 
                 you can enter those coords. in octogoat settings and save them. They will be displayed under "safe resume homing"
                 as your "assumed position" coords. Then you just click that second checkbox and octogoat will tell your printer 
                 that is where you are. 
-                *Don't tell nobody but if you are confident in your machines "assumed position" or its current coordinant state, 
-                you can skip the precision alignment and just set temps and hit resume now and go back to bed. 
+                *Don't tell nobody as this is not recommended but some confident in "assumed position" or its current coordinant state, 
+                will skip the precision alignment and just set temps and hit resume now and go back to bed. 
                   The last option is the easy fail safe "safe resume homing" which simply homes x and y and sets a temporary "safe_z"
                   
-                    However you begin on the next step, when you hit that next button ocotgoat then moves the toolhead to the 
-                "true alignment point".  From there you use your motion commands to algn nozzle to that perfect left or 
-                right-most edge, and drop it down to paper-test perfect.  Then when you hit "position calibrated" Octogoat informs 
-                your printer of absolute coordinate reality, triangulating your printer to the partial print and to the newly 
-                constructed safe _resume.GCODE.  Way easier done than said. If your a noob or have any questions holler at me, 
+                    However you begin on the next step, [on to precision alignment] moves the toolhead to the true alignment point".  From there you use your motion commands to algn nozzle to that perfect left or 
+                right-most edge, and drop it down to paper-test perfect.  Then select "position calibrated" Octogoat then locks 
+                your printer to coordinate reality, triangulating the nozzle, the print, and the new _resume.gcode.
+                Way easier done than said. If your a noob or have any questions holler at me, 
                 I got you. Looks like your code is ready now.
                 
                     Let's get you lined back up and watch this thing resume like it never missed a beat!
@@ -224,7 +223,7 @@
             <div class="octogoat-resume-actions">
                 <button class="btn btn-large octogoat-download-btn"
                         data-bind="enable: canDownloadResume(), click: downloadResume"
-                        title="place holder">
+                        title="this options downloads the _resume.gcode to your">
                     Download Resume GCODE
                 </button>
 
