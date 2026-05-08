@@ -10,7 +10,7 @@ plugin_author_email = "ksmith1489@protonmail.com"
 plugin_url = "https://app.lazarus3dprint.com"
 plugin_license = "Proprietary - See LICENSE.txt"
 plugin_requires = ["requests"]
-additional_setup_parameters = {"python_requires": ">=3.7,<4"}
+additional_setup_parameters = {}
 
 try:
     import octoprint_setuptools
