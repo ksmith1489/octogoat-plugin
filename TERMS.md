@@ -43,5 +43,5 @@ To the fullest extent permitted by law, Lazarus / OctoGoat is not liable for ind
 We may update these Terms from time to time. Continued use after an update means you accept the revised Terms.
 
 ## 11. Contact
-Support: support@YOURDOMAIN.COM
-Business / OEM / partnership inquiries: support@YOURDOMAIN.COM
+Support: https://app.lazarus3dprint.com
+Business / OEM / partnership inquiries: https://app.lazarus3dprint.com

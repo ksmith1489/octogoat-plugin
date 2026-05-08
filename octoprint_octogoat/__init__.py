@@ -46,17 +46,17 @@ class OctoGoatPlugin(
             firmware_type="klipper",
             smart_park_enabled=False,
             smart_park_acknowledged=False,
-            park_x=20.0,
-            park_y=20.0,
+            park_x="",
+            park_y="",
             park_z="",
             park_z_offset=50.0,
             safe_z_hop=10.0,
             control_mode="octoprint",
             moonraker_url="",
             moonraker_api_key="",
-            moonraker_park_x=20.0,
-            moonraker_park_y=20.0,
-            moonraker_park_z=200.0,
+            moonraker_park_x="",
+            moonraker_park_y="",
+            moonraker_park_z="",
             moonraker_upload_and_print=False,
             moonraker_timeout_seconds=8,
             z_max_override_mm="",
@@ -817,14 +817,8 @@ class OctoGoatPlugin(
         return 200.0
 
     def _ensure_assumed_position_defaults(self):
-        stored_park_z = self._settings.get(["park_z"])
-
-        if stored_park_z not in ("", None):
-            return
-
-        park_z = self._get_default_assumed_position_z()
-        self._settings.set(["park_z"], park_z)
-        self._settings.save()
+        # Leave fresh-install settings blank; runtime fallbacks are computed as needed.
+        return
 
     def _get_assumed_position_from_settings(self):
         park_x = float(self._settings.get(["park_x"]) or 20.0)
@@ -932,11 +926,13 @@ class OctoGoatPlugin(
 
 
 __plugin_name__ = "OctoGoat"
-__plugin_version__ = "0.1.0"
-__plugin_author__ = "Lazarus / OctoGoat"
-__plugin_url__ = "https://YOURDOMAIN.COM/octogoat"
-__plugin_license__ = "Proprietary - See LICENSE.txt"
-__plugin_privacypolicy__ = "https://YOURDOMAIN.COM/privacy"
+__plugin_version__ = "0.1.1"
+__plugin_description__ = "Safely resume failed 3D prints with guided alignment, local resume G-code generation, and Klipper/Moonraker support."
+__plugin_author__ = "ksmith1489"
+__plugin_author_email__ = "ksmith1489@protonmail.com"
+__plugin_url__ = "https://app.lazarus3dprint.com"
+__plugin_license__ = "Proprietary https://app.lazarus3dprint.com/license"
+__plugin_privacypolicy__ = "https://app.lazarus3dprint.com/privacy"
 __plugin_pythoncompat__ = ">=3.7,<4"
 
 

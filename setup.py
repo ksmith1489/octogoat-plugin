@@ -8,7 +8,7 @@ plugin_description = "Safely resume failed 3D prints with guided alignment, loca
 plugin_author = "ksmith1489"
 plugin_author_email = "ksmith1489@protonmail.com"
 plugin_url = "https://app.lazarus3dprint.com"
-plugin_license = "Proprietary - See LICENSE.txt"
+plugin_license = "Proprietary https://app.lazarus3dprint.com/license"
 plugin_requires = ["requests"]
 additional_setup_parameters = {}
 

@@ -37,4 +37,4 @@ We use reasonable measures to protect the information we maintain, but no system
 We may update this Privacy Policy from time to time. Continued use after an update means you accept the revised policy.
 
 ## 9. Contact
-Privacy questions: support@YOURDOMAIN.COM
+Privacy questions: https://app.lazarus3dprint.com/privacy

@@ -41,4 +41,4 @@ Use of cloud-connected functionality, including checkout, activation, and
 license validation, is also subject to the Terms of Service and Privacy Policy.
 
 For licensing questions, partnership inquiries, or OEM/manufacturer licensing,
-contact: support@YOURDOMAIN.COM
+visit: https://app.lazarus3dprint.com/license
