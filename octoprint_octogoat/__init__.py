@@ -6,11 +6,13 @@ import re
 import time
 import uuid
 import io
+import json
 from urllib.parse import urlparse, urlunparse
 
 import flask
 import octoprint.plugin
 import requests
+from octoprint.access.permissions import Permissions
 
 from .resume_engine import build_resumed_gcode
 
@@ -68,6 +70,9 @@ class OctoGoatPlugin(
     def is_api_protected(self):
         return True
 
+    def is_template_autoescaped(self):
+        return True
+
     def get_template_configs(self):
         return [
             dict(
@@ -123,6 +128,17 @@ class OctoGoatPlugin(
         if request.args.get("download_resume") != "1":
             return flask.jsonify(ok=True)
 
+        permission_error = self._require_permission(
+            Permissions.CONTROL,
+            "Downloading resume output requires OctoPrint's Control permission.",
+        )
+        if permission_error is not None:
+            return permission_error
+
+        license_error = self._require_valid_license_for_output()
+        if license_error is not None:
+            return license_error
+
         if not hasattr(self, "_resume_cache"):
             response = flask.jsonify(ok=False, error="No resume built")
             response.status_code = 404
@@ -140,6 +156,9 @@ class OctoGoatPlugin(
         data = data or {}
 
         try:
+            permission_error = self._check_command_permissions(command)
+            if permission_error is not None:
+                return permission_error
             return self._handle_api_command(command, data)
         except Exception as e:
             self._logger.exception("OctoGOAT API command failed: %s", command)
@@ -194,39 +213,19 @@ class OctoGoatPlugin(
             )
 
         if command == "validate":
-            install_id = self._settings.get(["install_id"])
-            last_validated = int(self._settings.get(["last_validated"]) or 0)
-            engine_url = (self._settings.get(["engine_url"]) or "").rstrip("/")
-            validate_url = f"{engine_url}/validate"
-            now = int(time.time())
-
-            if last_validated and (now - last_validated) < MONTH_SECONDS:
-                return dict(valid=True)
-
-            try:
-                response = requests.post(
-                    validate_url,
-                    json={"install_id": install_id},
-                    timeout=5,
-                )
-
-                if response.status_code != 200:
-                    return dict(valid=False)
-
-                payload = response.json()
-                is_valid = payload.get("valid") is True
-
-                if is_valid:
-                    self._settings.set(["last_validated"], now)
-                    self._settings.save()
-
-                return dict(valid=is_valid)
-            except Exception:
-                if last_validated and (now - last_validated) < MONTH_SECONDS:
-                    return dict(valid=True)
-                return dict(valid=False)
+            status = self._get_license_status()
+            return dict(
+                valid=status["valid"],
+                source=status.get("source"),
+                expires_at=status.get("expires_at"),
+                activation_url=self._build_activation_url(),
+            )
 
         if command == "build_resume":
+            license_error = self._require_valid_license_for_output()
+            if license_error is not None:
+                return license_error
+
             try:
                 measured_height = float(data.get("measured_height"))
             except Exception:
@@ -400,6 +399,10 @@ class OctoGoatPlugin(
             return dict(ok=True, message="it is now safe to set nozzle temp")
 
         if command == "execute_resume":
+            license_error = self._require_valid_license_for_output()
+            if license_error is not None:
+                return license_error
+
             if not hasattr(self, "_resume_cache"):
                 return dict(ok=False, error="No resume built")
 
@@ -411,6 +414,10 @@ class OctoGoatPlugin(
             return dict(ok=True)
 
         if command == "upload_resume_to_moonraker":
+            license_error = self._require_valid_license_for_output()
+            if license_error is not None:
+                return license_error
+
             if not hasattr(self, "_resume_cache"):
                 return dict(ok=False, error="No resume built")
 
@@ -514,6 +521,184 @@ class OctoGoatPlugin(
             ))
 
         return urlunparse(parsed).rstrip("/")
+
+    def _build_activation_url(self):
+        engine_url = str(self._settings.get(["engine_url"]) or "").strip().rstrip("/")
+        if not engine_url:
+            engine_url = "https://app.lazarus3dprint.com"
+
+        install_id = str(self._settings.get(["install_id"]) or "").strip()
+        if install_id:
+            return "{base}/activate?install_id={install_id}".format(
+                base=engine_url,
+                install_id=install_id,
+            )
+        return engine_url + "/activate"
+
+    def _error_response(self, message, status_code=400, **extra):
+        payload = dict(ok=False, error=message)
+        payload.update(extra)
+        response = flask.jsonify(payload)
+        response.status_code = status_code
+        return response
+
+    def _require_permission(self, permission, error_message):
+        if permission is not None and not permission.can():
+            return self._error_response(error_message, status_code=403)
+        return None
+
+    def _check_command_permissions(self, command):
+        if command == "status":
+            return self._require_permission(
+                Permissions.STATUS,
+                "Viewing OctoGoat status requires OctoPrint's Status permission.",
+            )
+
+        if command in ("set_control_mode", "set_assumed_position", "test_moonraker"):
+            return self._require_permission(
+                Permissions.SETTINGS,
+                "This OctoGoat action requires OctoPrint's Settings Admin permission.",
+            )
+
+        if command in (
+            "build_resume",
+            "safe_resume_homing",
+            "apply_assumed_position",
+            "apply_park",
+            "goto_datum",
+            "reset_alignment_z",
+            "lock_datum",
+            "execute_resume",
+            "upload_resume_to_moonraker",
+        ):
+            return self._require_permission(
+                Permissions.CONTROL,
+                "This OctoGoat action requires OctoPrint's Control permission.",
+            )
+
+        return None
+
+    def _license_cache_path(self):
+        return os.path.join(self.get_plugin_data_folder(), "license_cache.json")
+
+    def _load_license_cache(self):
+        try:
+            with open(self._license_cache_path(), "r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+        except Exception:
+            return {}
+
+        if isinstance(payload, dict):
+            return payload
+        return {}
+
+    def _save_license_cache(self, payload):
+        path = self._license_cache_path()
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, indent=2, sort_keys=True)
+
+    def _clear_license_cache(self):
+        try:
+            os.remove(self._license_cache_path())
+        except OSError:
+            pass
+
+    def _get_cached_license_status(self, now=None):
+        if now is None:
+            now = int(time.time())
+
+        install_id = str(self._settings.get(["install_id"]) or "").strip()
+        cache = self._load_license_cache()
+        cached_install_id = str(cache.get("install_id") or "").strip()
+
+        try:
+            expires_at = int(cache.get("expires_at") or 0)
+            validated_at = int(cache.get("validated_at") or 0)
+        except Exception:
+            return dict(valid=False, source="cache")
+
+        if install_id and cached_install_id == install_id and expires_at > now:
+            return dict(
+                valid=True,
+                source="cache",
+                validated_at=validated_at,
+                expires_at=expires_at,
+            )
+
+        return dict(valid=False, source="cache")
+
+    def _get_license_status(self):
+        now = int(time.time())
+        cached = self._get_cached_license_status(now=now)
+        if cached["valid"]:
+            return cached
+
+        install_id = str(self._settings.get(["install_id"]) or "").strip()
+        if not install_id:
+            self._clear_license_cache()
+            return dict(
+                valid=False,
+                source="local",
+                error="OctoGoat install ID is missing. Re-save the plugin settings and try again.",
+            )
+
+        engine_url = (self._settings.get(["engine_url"]) or "").rstrip("/")
+        validate_url = "{engine_url}/validate".format(engine_url=engine_url)
+
+        try:
+            response = requests.post(
+                validate_url,
+                json={"install_id": install_id},
+                timeout=5,
+            )
+        except requests.exceptions.RequestException:
+            return dict(
+                valid=False,
+                source="remote",
+                error="OctoGoat could not reach the license service. Connect to the internet and try again.",
+            )
+
+        if response.status_code != 200:
+            self._clear_license_cache()
+            return dict(valid=False, source="remote")
+
+        try:
+            payload = response.json()
+        except ValueError:
+            self._clear_license_cache()
+            return dict(valid=False, source="remote")
+
+        if payload.get("valid") is not True:
+            self._clear_license_cache()
+            return dict(valid=False, source="remote")
+
+        expires_at = now + MONTH_SECONDS
+        self._save_license_cache(
+            dict(
+                install_id=install_id,
+                validated_at=now,
+                expires_at=expires_at,
+            )
+        )
+        return dict(
+            valid=True,
+            source="remote",
+            validated_at=now,
+            expires_at=expires_at,
+        )
+
+    def _require_valid_license_for_output(self):
+        status = self._get_license_status()
+        if status["valid"]:
+            return None
+
+        return self._error_response(
+            status.get("error")
+            or "An active OctoGoat subscription is required before generating or using resume output.",
+            status_code=402,
+            activation_url=self._build_activation_url(),
+        )
 
     def _get_moonraker_headers(self):
         headers = {}
@@ -924,6 +1109,20 @@ class OctoGoatPlugin(
             formatted = formatted.rstrip("0").rstrip(".")
         return formatted
 
+    def get_update_information(self):
+        return dict(
+            octogoat=dict(
+                displayName="OctoGoat",
+                displayVersion=self._plugin_version,
+                type="github_commit",
+                user="ksmith1489",
+                repo="octogoat-plugin",
+                branch="main",
+                current=self._plugin_version,
+                pip="https://github.com/ksmith1489/octogoat-plugin/archive/{target}.zip",
+            )
+        )
+
 
 __plugin_name__ = "OctoGoat"
 __plugin_version__ = "0.1.1"
@@ -939,3 +1138,7 @@ __plugin_pythoncompat__ = ">=3.7,<4"
 def __plugin_load__():
     global __plugin_implementation__
     __plugin_implementation__ = OctoGoatPlugin()
+    global __plugin_hooks__
+    __plugin_hooks__ = {
+        "octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information
+    }

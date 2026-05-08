@@ -10,12 +10,13 @@ Depending on the feature being used, OctoGoat may process:
 - installation identifier;
 - license / subscription status data;
 - basic service logs needed for activation, validation, debugging, and abuse prevention;
-- billing-related information handled by Stripe.
+- billing-related information handled by Stripe and its checkout tools.
 
 OctoGoat does not sell personal data.
 
 ## 3. Payments
-Payments and subscription checkout are handled by Stripe. We do not store your full payment card information on our servers.
+Payments and subscription checkout are handled by Stripe. If you use Stripe-hosted checkout, Stripe processes billing information under Stripe's own Privacy Policy: https://stripe.com/privacy
+We do not store your full payment card information on our servers.
 
 ## 4. How we use information
 We use limited data to:
@@ -25,7 +26,7 @@ We use limited data to:
 - improve reliability and support users.
 
 ## 5. Data sharing
-We share data only with service providers needed to operate OctoGoat, such as payment and hosting providers, or when required by law.
+We share data only with service providers needed to operate OctoGoat, such as Stripe for payment processing and hosting providers, or when required by law.
 
 ## 6. Data retention
 We retain only the information reasonably necessary to operate the service, maintain subscription status, comply with legal obligations, and resolve disputes.
@@ -37,4 +38,4 @@ We use reasonable measures to protect the information we maintain, but no system
 We may update this Privacy Policy from time to time. Continued use after an update means you accept the revised policy.
 
 ## 9. Contact
-Privacy questions: https://app.lazarus3dprint.com/privacy
+Privacy questions: the_real_octogoat@proton.me

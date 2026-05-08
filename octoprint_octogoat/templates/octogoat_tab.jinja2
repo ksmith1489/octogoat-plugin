@@ -28,10 +28,9 @@
             <div class="octogoat-nav-left">
                 <button class="btn octogoat-nav-btn"
                         type="button"
-                        data-toggle="modal"
-                        data-target="#pricing-modal"
-                        title="place holder">
-                    Start here to save $$$
+                        data-bind="click: openActivationPage"
+                        title="Open OctoGoat plans and activation in your browser.">
+                    See Plans & Activate
                 </button>
 
                 <button class="btn octogoat-nav-btn"
@@ -62,6 +61,11 @@
                     License Required
                 </span>
             </div>
+        </div>
+
+        <div class="octogoat-help-text"
+             data-bind="visible: !licenseValid()">
+            Pricing and checkout happen on the OctoGoat website, outside OctoPrint.
         </div>
 
         <div class="octogoat-card">
@@ -236,30 +240,9 @@
         </div>
 
         <div class="octogoat-legal-links">
-            <a href="https://app.lazarus3dprint.com" target="_blank" rel="noopener noreferrer">Terms</a>
+            <a href="https://app.lazarus3dprint.com/terms" target="_blank" rel="noopener noreferrer">Terms</a>
             <span aria-hidden="true">|</span>
-            <a href="https://app.lazarus3dprint.com" target="_blank" rel="noopener noreferrer">Privacy</a>
-        </div>
-    </div>
-
-    <div id="pricing-modal"
-         class="modal hide fade"
-         tabindex="-1"
-         role="dialog"
-         aria-labelledby="pricing-modal-label"
-         aria-hidden="true">
-        <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-            <h3 id="pricing-modal-label">Activate OctoGOAT</h3>
-        </div>
-
-        <div class="modal-body">
-            <p>Choose a plan to activate OctoGOAT.</p>
-            <div id="pricing-table-container"></div>
-        </div>
-
-        <div class="modal-footer">
-            <button class="btn" type="button" data-dismiss="modal">Close</button>
+            <a href="https://app.lazarus3dprint.com/privacy" target="_blank" rel="noopener noreferrer">Privacy</a>
         </div>
     </div>
 

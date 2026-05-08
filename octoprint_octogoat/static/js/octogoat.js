@@ -53,6 +53,10 @@ $(function () {
             return self.resumeBuilt() && !!self.resumeFileName();
         });
 
+        self.openActivationPage = function () {
+            window.open(getActivationUrl(), "_blank", "noopener,noreferrer");
+        };
+
         function notify(title, text, type) {
             new PNotify({
                 title: title,
@@ -69,12 +73,53 @@ $(function () {
             return window.API_BASEURL || ((window.BASEURL || "/") + "api/");
         }
 
+        function getNormalizedEngineUrl() {
+            var engineUrl = "";
+
+            if (self.settingsViewModel &&
+                self.settingsViewModel.settings &&
+                self.settingsViewModel.settings.plugins &&
+                self.settingsViewModel.settings.plugins.octogoat &&
+                typeof self.settingsViewModel.settings.plugins.octogoat.engine_url === "function") {
+                engineUrl = $.trim(self.settingsViewModel.settings.plugins.octogoat.engine_url() || "");
+            }
+
+            if (!engineUrl) {
+                engineUrl = "https://app.lazarus3dprint.com";
+            }
+
+            return engineUrl.replace(/\/+$/, "");
+        }
+
+        function getInstallId() {
+            if (self.settingsViewModel &&
+                self.settingsViewModel.settings &&
+                self.settingsViewModel.settings.plugins &&
+                self.settingsViewModel.settings.plugins.octogoat &&
+                typeof self.settingsViewModel.settings.plugins.octogoat.install_id === "function") {
+                return $.trim(self.settingsViewModel.settings.plugins.octogoat.install_id() || "");
+            }
+
+            return "";
+        }
+
         function getFilesApiUrl() {
             return getApiBaseUrl() + "files/local?recursive=true";
         }
 
         function getResumeDownloadUrl() {
             return getApiBaseUrl() + "plugin/octogoat?download_resume=1&_ts=" + Date.now();
+        }
+
+        function getActivationUrl() {
+            var url = getNormalizedEngineUrl() + "/activate";
+            var installId = getInstallId();
+
+            if (installId) {
+                url += "?install_id=" + encodeURIComponent(installId);
+            }
+
+            return url;
         }
 
         function getRequestHeaders(method) {
@@ -891,38 +936,10 @@ $(function () {
             });
         };
 
-        self.onBeforeBinding = function () {
-            if (!document.querySelector("script[src='https://js.stripe.com/v3/pricing-table.js']")) {
-                var script = document.createElement("script");
-                script.src = "https://js.stripe.com/v3/pricing-table.js";
-                script.async = true;
-                document.body.appendChild(script);
-            }
-        };
-
         self.onAfterBinding = function () {
             self.bindFilePicker();
             self.bindDropzone();
         };
-
-        $("#pricing-modal").on("shown.bs.modal", function () {
-            var container = document.getElementById("pricing-table-container");
-            var installId;
-            var table;
-
-            if (!container || container.children.length !== 0) {
-                return;
-            }
-
-            installId = self.settingsViewModel.settings.plugins.octogoat.install_id();
-            table = document.createElement("stripe-pricing-table");
-
-            table.setAttribute("pricing-table-id", "prctbl_1T6RDmE52GVAutfiaLKmlSue");
-            table.setAttribute("publishable-key", "pk_live_51Se4ekE52GVAutfixtDzM2jB9edEZLVHIGm8EwPQ6IxZakas76Zu8xap83euJ56hnArtqEKPqS2yxwATen3yLcgn000er82jFv");
-            table.setAttribute("client-reference-id", installId);
-
-            container.appendChild(table);
-        });
 
         self.onStartupComplete = function () {
             self.validateLicense();
