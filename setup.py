@@ -3,7 +3,7 @@ from setuptools import setup
 plugin_identifier = "octogoat"
 plugin_package = "octoprint_octogoat"
 plugin_name = "OctoGoat"
-plugin_version = "0.1.0"
+plugin_version = "0.1.1"
 plugin_description = "Safely resume failed 3D prints with guided alignment, local resume G-code generation, and Klipper/Moonraker support."
 plugin_author = "ksmith1489"
 plugin_author_email = "ksmith1489@protonmail.com"
