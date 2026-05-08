@@ -4,13 +4,13 @@ plugin_identifier = "octogoat"
 plugin_package = "octoprint_octogoat"
 plugin_name = "OctoGoat"
 plugin_version = "0.1.0"
-plugin_description = "Resumes, Realigns, Restores, Recovers, Failed prints easily, quickly and accurately  ."
-plugin_author = "Lazarus / OctoGoat"
+plugin_description = "Safely resume failed 3D prints with guided alignment, local resume G-code generation, and Klipper/Moonraker support."
+plugin_author = "ksmith1489"
 plugin_author_email = "ksmith1489@protonmail.com"
-plugin_url = "https://YOURDOMAIN.COM/octogoat"
+plugin_url = "https://app.lazarus3dprint.com"
 plugin_license = "Proprietary - See LICENSE.txt"
 plugin_requires = ["requests"]
-additional_setup_parameters = {}
+additional_setup_parameters = {"python_requires": ">=3.7,<4"}
 
 try:
     import octoprint_setuptools
