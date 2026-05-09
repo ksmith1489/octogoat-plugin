@@ -10,8 +10,6 @@ authors = [
     {name = "Kenneth B Smith", email = "ksmith1489@protonmail.com"}
 ]
 readme = {file = "README.md", content-type = "text/markdown"}
-license = {text = "Proprietary - See LICENSE.txt"}
-license-files = ["LICENSE.txt"]
 requires-python = ">=3.7, <4"
 dependencies = [
     "requests",
