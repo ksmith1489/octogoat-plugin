@@ -1,4 +1,4 @@
-.lazarus-ui {
+#tab_plugin_lazarus {
     --lazarus-border: #d7dee7;
     --lazarus-panel: #ffffff;
     --lazarus-panel-alt: #f6f8fb;
@@ -9,6 +9,9 @@
     --lazarus-success: #1f7a4c;
     --lazarus-danger: #a33a2b;
     color: var(--lazarus-text);
+}
+
+.lazarus-ui {
     padding: 16px 8px 28px;
 }
 
@@ -312,13 +315,26 @@
 
 .lazarus-standard-option,
 .lazarus-calibrated-action {
+    background: var(--lazarus-panel-alt);
+    border: 1px solid var(--lazarus-border);
+    border-radius: 10px;
     display: grid;
     gap: 12px;
+    padding: 16px;
 }
 
 .lazarus-disclaimer,
 .lazarus-critical-warning {
     margin: 0;
+}
+
+#tab_plugin_lazarus .modal-body {
+    color: var(--lazarus-text);
+}
+
+#tab_plugin_lazarus .modal-body .btn-block {
+    box-sizing: border-box;
+    width: 100%;
 }
 
 .lazarus-ui .label-success {
