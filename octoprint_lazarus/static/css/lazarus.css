@@ -1,0 +1,314 @@
+.lazarus-ui {
+    --lazarus-border: #d7dee7;
+    --lazarus-panel: #ffffff;
+    --lazarus-panel-alt: #f6f8fb;
+    --lazarus-text: #1f2933;
+    --lazarus-muted: #5f6c7b;
+    --lazarus-accent: #205493;
+    --lazarus-accent-strong: #163d6b;
+    --lazarus-success: #1f7a4c;
+    --lazarus-danger: #a33a2b;
+    color: var(--lazarus-text);
+    padding: 16px 8px 28px;
+}
+
+.lazarus-ui .row-fluid {
+    margin-bottom: 0;
+}
+
+.lazarus-hero,
+.lazarus-card {
+    background: var(--lazarus-panel);
+    border: 1px solid var(--lazarus-border);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(31, 41, 51, 0.05);
+}
+
+.lazarus-hero {
+    margin-bottom: 16px;
+    padding: 20px;
+}
+
+.lazarus-title {
+    margin: 0;
+    font-size: 30px;
+    line-height: 1.1;
+}
+
+.lazarus-tagline {
+    margin: 8px 0 0;
+    max-width: 760px;
+    color: var(--lazarus-muted);
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.lazarus-nav-row {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    margin-top: 18px;
+}
+
+.lazarus-nav-left,
+.lazarus-nav-right,
+.lazarus-resume-actions,
+.lazarus-file-selector-controls,
+.lazarus-failsafe-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.lazarus-nav-btn,
+.lazarus-function-btn,
+.lazarus-action-btn,
+.lazarus-download-btn,
+.lazarus-resume-btn,
+.lazarus-failsafe-btn,
+.lazarus-moonraker-test-btn {
+    border-radius: 8px;
+    font-weight: 600;
+    min-height: 40px;
+}
+
+.lazarus-nav-btn,
+.lazarus-function-btn,
+.lazarus-failsafe-btn,
+.lazarus-moonraker-test-btn {
+    background: var(--lazarus-panel-alt);
+    border: 1px solid var(--lazarus-border);
+    color: var(--lazarus-text);
+}
+
+.lazarus-action-btn,
+.lazarus-download-btn,
+.lazarus-resume-btn {
+    background: var(--lazarus-accent);
+    border: 1px solid var(--lazarus-accent);
+    color: #fff;
+}
+
+.lazarus-action-btn:hover,
+.lazarus-action-btn:focus,
+.lazarus-download-btn:hover,
+.lazarus-download-btn:focus,
+.lazarus-resume-btn:hover,
+.lazarus-resume-btn:focus {
+    background: var(--lazarus-accent-strong);
+    border-color: var(--lazarus-accent-strong);
+    color: #fff;
+}
+
+.lazarus-help-text {
+    color: var(--lazarus-muted);
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 10px 0 16px;
+}
+
+.lazarus-card {
+    margin-bottom: 16px;
+    padding: 20px;
+}
+
+.lazarus-card h4 {
+    margin: 0 0 14px;
+}
+
+.lazarus-inputs-head {
+    margin-bottom: 18px;
+}
+
+.lazarus-file-selector-label,
+.lazarus-standard-label {
+    color: var(--lazarus-muted);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.lazarus-file-selected,
+.lazarus-datum-display,
+.lazarus-preview,
+.lazarus-warning-box {
+    background: var(--lazarus-panel-alt);
+    border: 1px solid var(--lazarus-border);
+    border-radius: 10px;
+}
+
+.lazarus-file-selected,
+.lazarus-datum-display {
+    margin-bottom: 12px;
+    padding: 12px 14px;
+}
+
+.lazarus-file-selector-controls select {
+    flex: 1 1 320px;
+    margin-bottom: 0;
+}
+
+.lazarus-file-picker-btn {
+    flex: 0 0 auto;
+}
+
+.lazarus-file-dropzone {
+    background: var(--lazarus-panel-alt);
+    border: 2px dashed #bfd1e6;
+    border-radius: 10px;
+    color: var(--lazarus-muted);
+    margin-top: 12px;
+    padding: 18px;
+    text-align: center;
+    transition: border-color 120ms ease, background 120ms ease;
+}
+
+.lazarus-file-dropzone.is-dragging {
+    background: #eef5ff;
+    border-color: var(--lazarus-accent);
+    color: var(--lazarus-accent-strong);
+}
+
+.lazarus-hidden-file-input {
+    display: none;
+}
+
+.lazarus-input,
+.lazarus-ui select,
+.lazarus-ui input[type="number"],
+.lazarus-ui input[type="text"] {
+    border: 1px solid var(--lazarus-border);
+    border-radius: 8px;
+    box-shadow: none;
+    min-height: 40px;
+}
+
+.lazarus-warning-box {
+    padding: 16px;
+}
+
+.lazarus-warning-box p:last-child,
+.lazarus-calibrated-action p:last-child,
+.lazarus-help-text:last-child {
+    margin-bottom: 0;
+}
+
+.lazarus-warning-intro {
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.lazarus-stage-header {
+    align-items: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    justify-content: space-between;
+}
+
+.lazarus-datum-display span {
+    display: inline-block;
+    margin-right: 14px;
+}
+
+.lazarus-preview {
+    margin: 0;
+    max-height: 320px;
+    overflow: auto;
+    padding: 16px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.lazarus-resume-card {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.lazarus-checkbox {
+    margin: 0;
+    width: 100%;
+}
+
+.lazarus-checkbox input {
+    margin-right: 8px;
+}
+
+.lazarus-resume-actions {
+    width: 100%;
+}
+
+.lazarus-resume-actions .btn {
+    flex: 1 1 220px;
+}
+
+.lazarus-legal-links {
+    color: var(--lazarus-muted);
+    font-size: 13px;
+    text-align: center;
+}
+
+.lazarus-legal-links a {
+    color: var(--lazarus-accent);
+}
+
+.lazarus-option-stack {
+    display: grid;
+    gap: 14px;
+}
+
+.lazarus-expert-option,
+.lazarus-disclaimer,
+.lazarus-critical-warning {
+    color: var(--lazarus-text);
+}
+
+.lazarus-standard-option,
+.lazarus-calibrated-action {
+    display: grid;
+    gap: 12px;
+}
+
+.lazarus-disclaimer,
+.lazarus-critical-warning {
+    margin: 0;
+}
+
+.lazarus-ui .label-success {
+    background: var(--lazarus-success);
+}
+
+.lazarus-ui .label-important {
+    background: var(--lazarus-danger);
+}
+
+.lazarus-ui button[disabled],
+.lazarus-ui .btn[disabled] {
+    opacity: 0.55;
+}
+
+@media (max-width: 767px) {
+    .lazarus-nav-row,
+    .lazarus-stage-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .lazarus-nav-left,
+    .lazarus-nav-right,
+    .lazarus-resume-actions,
+    .lazarus-file-selector-controls,
+    .lazarus-failsafe-row {
+        flex-direction: column;
+    }
+
+    .lazarus-resume-actions .btn,
+    .lazarus-file-selector-controls select {
+        width: 100%;
+    }
+}

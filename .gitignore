@@ -1,7 +1,16 @@
+# Python cache / build artifacts
 __pycache__/
+**/__pycache__/
 *.py[cod]
+*.pyo
+*.pyd
 *.class
-tests/
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+
+# Local environment
 .env
 venv/
 .DS_Store

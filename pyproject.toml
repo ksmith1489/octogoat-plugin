@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "OctoPrint-Lazarus"
+version = "0.1.1"
+description = "Resumes failed prints if the print is still on the bed."
+authors = [
+    {name = "Kenneth B Smith", email = "ksmith1489@protonmail.com"}
+]
+readme = {file = "README.md", content-type = "text/markdown"}
+license = {text = "Proprietary - See LICENSE.txt"}
+license-files = ["LICENSE.txt"]
+requires-python = ">=3.7, <4"
+dependencies = [
+    "requests",
+]
+
+[tool.setuptools.packages.find]
+include = [
+    "octoprint_lazarus",
+    "octoprint_lazarus.*",
+]
+
+[tool.setuptools.package-data]
+octoprint_lazarus = [
+    "templates/*.jinja2",
+    "static/**/*",
+]
+
+[project.entry-points."octoprint.plugin"]
+lazarus = "octoprint_lazarus"
+
+[project.urls]
+Homepage = "https://app.lazarus3dprint.com"
+Source = "https://github.com/ksmith1489/octogoat-plugin"
+Documentation = "https://app.lazarus3dprint.com/activate"

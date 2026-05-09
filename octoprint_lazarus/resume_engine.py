@@ -500,7 +500,7 @@ def build_resumed_gcode(
         raise ValueError("Could not find a resume anchor at/after computed resume height.")
 
     header: List[str] = []
-    header.append("; --- RESUME FROM FAILURE (OCTOGOAT) ---")
+    header.append("; --- RESUME FROM FAILURE (LAZARUS) ---")
     header.append(
         f"; Inputs: LH={resolved_layer_height:.5f}mm, ILH={resolved_initial_layer_height:.5f}mm, PH={print_height_mm:.3f}mm"
     )
@@ -515,7 +515,7 @@ def build_resumed_gcode(
     header.append(f"; Detected extrusion mode in source: {detected_mode.upper()}")
     header.append("G90 ; absolute positioning")
     header.append("G21 ; millimeters")
-    header.append("M83 ; relative extrusion (OctoGoat-safe)")
+    header.append("M83 ; relative extrusion (Lazarus-safe)")
     header.append("G92 E0 ; reset extruder")
     if inject_last_motion_feedrate and last_motion_f is not None:
         header.append(f"G1 F{last_motion_f:.3f} ; inherit slicer feedrate before anchor")

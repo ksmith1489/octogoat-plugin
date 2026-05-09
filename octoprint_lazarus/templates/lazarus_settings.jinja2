@@ -1,10 +1,10 @@
 <div class="section">
-  <h3>OctoGoat Settings</h3>
+  <h3>Lazarus Settings</h3>
 
   <div class="control-group">
     <label class="control-label">Firmware Type</label>
     <div class="controls">
-      <select data-bind="value: settings.plugins.octogoat.firmware_type">
+      <select data-bind="value: settings.plugins.lazarus.firmware_type">
         <option value="klipper">Klipper</option>
         <option value="marlin">Marlin</option>
       </select>
@@ -15,19 +15,19 @@
   </div>
 
   <div class="control-group">
-    <label class="control-label">Engine URL</label>
+    <label class="control-label">License Service URL</label>
     <div class="controls">
       <input type="text"
              class="input-block-level"
-             data-bind="value: settings.plugins.octogoat.engine_url">
+             data-bind="value: settings.plugins.lazarus.engine_url">
       <p class="help-block">
-        License authority endpoint used for OctoGoat validation.
+        Endpoint used for activation and license validation.
       </p>
     </div>
   </div>
 
   <div class="control-group">
-    <label class="control-label">Saved Assumed Position Coordinates</label>
+    <label class="control-label">Saved Assumed Position</label>
     <div class="controls">
       <div class="row-fluid">
         <div class="span4">
@@ -35,7 +35,7 @@
           <input type="number"
                  step="0.01"
                  class="input-block-level"
-                 data-bind="value: settings.plugins.octogoat.park_x">
+                 data-bind="value: settings.plugins.lazarus.park_x">
         </div>
 
         <div class="span4">
@@ -43,7 +43,7 @@
           <input type="number"
                  step="0.01"
                  class="input-block-level"
-                 data-bind="value: settings.plugins.octogoat.park_y">
+                 data-bind="value: settings.plugins.lazarus.park_y">
         </div>
 
         <div class="span4">
@@ -51,12 +51,12 @@
           <input type="number"
                  step="0.01"
                  class="input-block-level"
-                 data-bind="value: settings.plugins.octogoat.park_z">
+                 data-bind="value: settings.plugins.lazarus.park_z">
         </div>
       </div>
 
       <p class="help-block">
-        Used by the Step 1 assumed position checkbox in OctoPrint mode. Safe Resume Homing does not require these values.
+        Optional starting coordinates for printers that park in a known location after a failed job or cancel event.
       </p>
     </div>
   </div>
@@ -68,9 +68,9 @@
              min="0"
              step="0.01"
              class="input-block-level"
-             data-bind="value: settings.plugins.octogoat.z_max_override_mm">
+             data-bind="value: settings.plugins.lazarus.z_max_override_mm">
       <p class="help-block">
-        Optional fallback only. Leave blank unless OctoGoat cannot detect your machine Z max from Moonraker or the OctoPrint printer profile.
+        Optional fallback if Lazarus cannot detect your machine's Z maximum from Moonraker or the OctoPrint printer profile.
       </p>
     </div>
   </div>
@@ -85,9 +85,9 @@
       <input type="text"
              class="input-block-level"
              placeholder="http://printer.local:7125"
-             data-bind="value: settings.plugins.octogoat.moonraker_url">
+             data-bind="value: settings.plugins.lazarus.moonraker_url">
       <p class="help-block">
-        Base URL for Moonraker. The front OctoGoat tab controls whether Moonraker mode is on or off.
+        Base URL for Moonraker. Toggle Moonraker mode from the Lazarus tab.
       </p>
     </div>
   </div>
@@ -97,15 +97,15 @@
     <div class="controls">
       <input type="password"
              class="input-block-level"
-             data-bind="value: settings.plugins.octogoat.moonraker_api_key">
+             data-bind="value: settings.plugins.lazarus.moonraker_api_key">
       <p class="help-block">
-        No need to fill this in for normal operation but you never know so its here just incase.
+        Leave blank unless your Moonraker instance requires an API key.
       </p>
     </div>
   </div>
 
   <div class="control-group">
-    <label class="control-label">Moonraker assumed position parking spot</label>
+    <label class="control-label">Moonraker Assumed Position</label>
     <div class="controls">
       <div class="row-fluid">
         <div class="span4">
@@ -113,7 +113,7 @@
           <input type="number"
                  step="0.01"
                  class="input-block-level"
-                 data-bind="value: settings.plugins.octogoat.moonraker_park_x">
+                 data-bind="value: settings.plugins.lazarus.moonraker_park_x">
         </div>
 
         <div class="span4">
@@ -121,7 +121,7 @@
           <input type="number"
                  step="0.01"
                  class="input-block-level"
-                 data-bind="value: settings.plugins.octogoat.moonraker_park_y">
+                 data-bind="value: settings.plugins.lazarus.moonraker_park_y">
         </div>
 
         <div class="span4">
@@ -129,38 +129,38 @@
           <input type="number"
                  step="0.01"
                  class="input-block-level"
-                 data-bind="value: settings.plugins.octogoat.moonraker_park_z">
+                 data-bind="value: settings.plugins.lazarus.moonraker_park_z">
         </div>
       </div>
 
       <p class="help-block">
-        For experienced operators who know their printer's parking coordinants after they cancel_print (like when one fails),you can enter those coordinants here as a starting point to save time.
+        Optional starting coordinates for Moonraker mode when your printer parks in a known location.
       </p>
     </div>
   </div>
 
   <div class="control-group">
-    <label class="control-label">Moonraker upload behavior</label>
+    <label class="control-label">Moonraker Upload Behavior</label>
     <div class="controls">
       <label class="checkbox">
         <input type="checkbox"
-               data-bind="checked: settings.plugins.octogoat.moonraker_upload_and_print">
-        Upload and start the resume print when Resume Print is pressed
+               data-bind="checked: settings.plugins.lazarus.moonraker_upload_and_print">
+        Start the uploaded resume file automatically when Resume Print is pressed
       </label>
       <p class="help-block">
-        If unchecked, Resume Print uploads the generated _resume.gcode to Moonraker but does not start it.
+        If unchecked, Resume Print uploads the generated file to Moonraker without starting it.
       </p>
     </div>
   </div>
 
   <div class="control-group">
-    <label class="control-label">Moonraker timeout seconds</label>
+    <label class="control-label">Moonraker Timeout (seconds)</label>
     <div class="controls">
       <input type="number"
              min="1"
              step="1"
              class="input-block-level"
-             data-bind="value: settings.plugins.octogoat.moonraker_timeout_seconds">
+             data-bind="value: settings.plugins.lazarus.moonraker_timeout_seconds">
     </div>
   </div>
 </div>

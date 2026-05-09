@@ -1,10 +1,10 @@
-OctoGoat Proprietary Software License
-Copyright © 2026 Lazarus / OctoGoat. All rights reserved.
+Lazarus Proprietary Software License
+Copyright © 2026 Lazarus. All rights reserved.
 
 Patent Pending.
 
 This software is licensed, not sold. Subject to your compliance with the
-applicable Terms of Service, Lazarus / OctoGoat grants you a limited,
+applicable Terms of Service, Lazarus grants you a limited,
 non-exclusive, non-transferable, non-sublicensable, revocable license to
 install and use this software solely for your own internal 3D printing use.
 
@@ -27,7 +27,7 @@ any kind, express or implied, to the fullest extent permitted by law,
 including without limitation implied warranties of merchantability, fitness
 for a particular purpose, title, and non-infringement.
 
-To the fullest extent permitted by law, Lazarus / OctoGoat shall not be
+To the fullest extent permitted by law, Lazarus shall not be
 liable for any indirect, incidental, special, consequential, exemplary, or
 punitive damages, or any loss of data, profits, revenue, business, goodwill,
 or use, arising out of or related to the software or its use.

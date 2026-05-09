@@ -1,18 +1,18 @@
-# OctoGoat Privacy Policy
+# Lazarus Privacy Policy
 
 Effective date: April 22, 2026
 
 ## 1. Overview
-This Privacy Policy explains what information OctoGoat collects and how it is used.
+This Privacy Policy explains what information Lazarus collects and how it is used.
 
 ## 2. Information we collect
-Depending on the feature being used, OctoGoat may process:
+Depending on the feature being used, Lazarus may process:
 - installation identifier;
 - license / subscription status data;
 - basic service logs needed for activation, validation, debugging, and abuse prevention;
 - billing-related information handled by Stripe and its checkout tools.
 
-OctoGoat does not sell personal data.
+Lazarus does not sell personal data.
 
 ## 3. Payments
 Payments and subscription checkout are handled by Stripe. If you use Stripe-hosted checkout, Stripe processes billing information under Stripe's own Privacy Policy: https://stripe.com/privacy
@@ -26,7 +26,7 @@ We use limited data to:
 - improve reliability and support users.
 
 ## 5. Data sharing
-We share data only with service providers needed to operate OctoGoat, such as Stripe for payment processing and hosting providers, or when required by law.
+We share data only with service providers needed to operate Lazarus, such as Stripe for payment processing and hosting providers, or when required by law.
 
 ## 6. Data retention
 We retain only the information reasonably necessary to operate the service, maintain subscription status, comply with legal obligations, and resolve disputes.
@@ -38,4 +38,4 @@ We use reasonable measures to protect the information we maintain, but no system
 We may update this Privacy Policy from time to time. Continued use after an update means you accept the revised policy.
 
 ## 9. Contact
-Privacy questions: the_real_octogoat@proton.me
+Privacy questions: ksmith1489@protonmail.com

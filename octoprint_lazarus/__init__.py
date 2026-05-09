@@ -18,6 +18,7 @@ from .resume_engine import build_resumed_gcode
 
 
 MONTH_SECONDS = 30 * 24 * 60 * 60
+# Legacy markers from earlier builds, kept only so startup can remove stale managed script blocks.
 ASSUMED_POSITION_MARKER_START = "; --- OctoGOAT Assumed Position ---"
 ASSUMED_POSITION_MARKER_END = "; --- End OctoGOAT Assumed Position ---"
 LEGACY_MARKER_START = "; --- OctoGOAT Smart Park ---"
@@ -31,7 +32,7 @@ PLUGIN_CANCEL_SHUTDOWN_COMMANDS = (
 )
 
 
-class OctoGoatPlugin(
+class LazarusPlugin(
     octoprint.plugin.SettingsPlugin,
     octoprint.plugin.TemplatePlugin,
     octoprint.plugin.AssetPlugin,
@@ -41,17 +42,12 @@ class OctoGoatPlugin(
 
     def get_settings_defaults(self):
         return dict(
-            api_key="",
             install_id=str(uuid.uuid4()),
-            last_validated=0,
             engine_url="https://app.lazarus3dprint.com",
             firmware_type="klipper",
-            smart_park_enabled=False,
-            smart_park_acknowledged=False,
             park_x="",
             park_y="",
             park_z="",
-            park_z_offset=50.0,
             safe_z_hop=10.0,
             control_mode="octoprint",
             moonraker_url="",
@@ -77,27 +73,26 @@ class OctoGoatPlugin(
         return [
             dict(
                 type="tab",
-                name="OctoGoat",
-                template="octogoat_tab.jinja2",
+                name="Lazarus",
+                template="lazarus_tab.jinja2",
                 custom_bindings=True,
             ),
             dict(
                 type="settings",
-                name="OctoGoat",
-                template="octogoat_settings.jinja2",
+                name="Lazarus",
+                template="lazarus_settings.jinja2",
                 custom_bindings=False,
             ),
         ]
 
     def get_assets(self):
         return dict(
-            js=["js/octogoat.js"],
-            css=["css/octogoat.css"],
+            js=["js/lazarus.js"],
+            css=["css/lazarus.css"],
         )
 
     def get_api_commands(self):
         return dict(
-            ping=[],
             status=[],
             validate=[],
             set_control_mode=["control_mode"],
@@ -105,24 +100,19 @@ class OctoGoatPlugin(
             build_resume=["measured_height"],
             safe_resume_homing=[],
             apply_assumed_position=[],
-            apply_park=[],
-            set_assumed_position=["x", "y", "z"],
             goto_datum=["x", "y"],
             reset_alignment_z=[],
             lock_datum=["x", "y", "z"],
             execute_resume=[],
-            upload_resume_to_moonraker=[],
         )
 
     def on_after_startup(self):
         try:
-            self._ensure_assumed_position_defaults()
-            self.cleanup_assumed_position_scripts()
+            self._cleanup_legacy_script_blocks()
         except Exception as e:
-            self._logger.error("Assumed position startup cleanup failed: %s" % e)
+            self._logger.error("Legacy startup cleanup failed: %s" % e)
 
-        self._logger.info("OctoGOAT loaded successfully")
-        self._logger.info("OctoGOAT plugin active")
+        self._logger.info("Lazarus plugin active")
 
     def on_api_get(self, request):
         if request.args.get("download_resume") != "1":
@@ -144,7 +134,7 @@ class OctoGoatPlugin(
             response.status_code = 404
             return response
 
-        filename = getattr(self, "_resume_filename", "octogoat_resume.gcode")
+        filename = getattr(self, "_resume_filename", "lazarus_resume.gcode")
         response = flask.make_response(self._resume_cache)
         response.headers["Content-Type"] = "text/plain; charset=utf-8"
         response.headers["Content-Disposition"] = 'attachment; filename="{filename}"'.format(
@@ -161,13 +151,10 @@ class OctoGoatPlugin(
                 return permission_error
             return self._handle_api_command(command, data)
         except Exception as e:
-            self._logger.exception("OctoGOAT API command failed: %s", command)
+            self._logger.exception("Lazarus API command failed: %s", command)
             return dict(ok=False, error=str(e))
 
     def _handle_api_command(self, command, data):
-        if command == "ping":
-            return dict(ok=True)
-
         if command == "status":
             return dict(
                 ok=True,
@@ -231,23 +218,12 @@ class OctoGoatPlugin(
             except Exception:
                 return dict(ok=False, error="Invalid measured height")
 
-            legacy_layer_height = data.get("layer_height")
-            if legacy_layer_height in ("", None):
-                legacy_layer_height = None
-            elif legacy_layer_height is not None:
-                try:
-                    legacy_layer_height = float(legacy_layer_height)
-                except Exception:
-                    return dict(ok=False, error="Invalid layer height")
-
             gcode_text, source = self._resolve_gcode_source(data)
             result = build_resumed_gcode(
                 original_gcode_text=gcode_text,
                 firmware=self._settings.get(["firmware_type"]),
                 print_height_mm=measured_height,
                 alignment_side=data.get("alignment_side") or data.get("side"),
-                quadrant=data.get("quadrant"),
-                layer_height_mm=legacy_layer_height,
             )
 
             self._resume_cache = result["resumed_text"]
@@ -302,7 +278,7 @@ class OctoGoatPlugin(
                 ),
             )
 
-        if command in ("apply_park", "apply_assumed_position"):
+        if command == "apply_assumed_position":
             if self._is_moonraker_mode():
                 park = self._get_moonraker_park_position()
                 cmd = "SET_KINEMATIC_POSITION X={x} Y={y} Z={z}".format(
@@ -330,18 +306,6 @@ class OctoGoatPlugin(
 
             self._printer.commands(cmd)
             return dict(ok=True, park=park, message="Assumed position coordinates applied.")
-
-        if command == "set_assumed_position":
-            try:
-                x = float(data.get("x"))
-                y = float(data.get("y"))
-                z = float(data.get("z"))
-            except Exception:
-                return dict(ok=False, error="Invalid assumed position")
-
-            self._set_assumed_position(x=x, y=y, z=z)
-            park = self._get_assumed_position_from_settings()
-            return dict(ok=True, park=park)
 
         if command == "goto_datum":
             x = float(data.get("x"))
@@ -413,16 +377,6 @@ class OctoGoatPlugin(
             self._printer.commands(self._resume_cache.splitlines())
             return dict(ok=True)
 
-        if command == "upload_resume_to_moonraker":
-            license_error = self._require_valid_license_for_output()
-            if license_error is not None:
-                return license_error
-
-            if not hasattr(self, "_resume_cache"):
-                return dict(ok=False, error="No resume built")
-
-            return self._moonraker_upload_resume()
-
         return None
 
     def _get_control_mode(self):
@@ -491,7 +445,7 @@ class OctoGoatPlugin(
     def _get_moonraker_base_url(self):
         base_url = str(self._settings.get(["moonraker_url"]) or "").strip()
         if not base_url:
-            raise ValueError("Moonraker URL missing. Add it in OctoGoat settings.")
+            raise ValueError("Moonraker URL missing. Add it in Lazarus settings.")
 
         if "://" not in base_url:
             base_url = "http://" + base_url
@@ -501,7 +455,7 @@ class OctoGoatPlugin(
         try:
             parsed_port = parsed.port
         except ValueError:
-            raise ValueError("Moonraker URL has an invalid port. Check the URL in OctoGoat settings.")
+            raise ValueError("Moonraker URL has an invalid port. Check the URL in Lazarus settings.")
 
         if parsed_port is None and normalized_path in ("", "/"):
             hostname = parsed.hostname or ""
@@ -551,29 +505,27 @@ class OctoGoatPlugin(
         if command == "status":
             return self._require_permission(
                 Permissions.STATUS,
-                "Viewing OctoGoat status requires OctoPrint's Status permission.",
+                "Viewing Lazarus status requires OctoPrint's Status permission.",
             )
 
-        if command in ("set_control_mode", "set_assumed_position", "test_moonraker"):
+        if command in ("set_control_mode", "test_moonraker"):
             return self._require_permission(
                 Permissions.SETTINGS,
-                "This OctoGoat action requires OctoPrint's Settings Admin permission.",
+                "This Lazarus action requires OctoPrint's Settings Admin permission.",
             )
 
         if command in (
             "build_resume",
             "safe_resume_homing",
             "apply_assumed_position",
-            "apply_park",
             "goto_datum",
             "reset_alignment_z",
             "lock_datum",
             "execute_resume",
-            "upload_resume_to_moonraker",
         ):
             return self._require_permission(
                 Permissions.CONTROL,
-                "This OctoGoat action requires OctoPrint's Control permission.",
+                "This Lazarus action requires OctoPrint's Control permission.",
             )
 
         return None
@@ -640,7 +592,7 @@ class OctoGoatPlugin(
             return dict(
                 valid=False,
                 source="local",
-                error="OctoGoat install ID is missing. Re-save the plugin settings and try again.",
+                error="Lazarus install ID is missing. Re-save the plugin settings and try again.",
             )
 
         engine_url = (self._settings.get(["engine_url"]) or "").rstrip("/")
@@ -656,7 +608,7 @@ class OctoGoatPlugin(
             return dict(
                 valid=False,
                 source="remote",
-                error="OctoGoat could not reach the license service. Connect to the internet and try again.",
+                error="Lazarus could not reach the license service. Connect to the internet and try again.",
             )
 
         if response.status_code != 200:
@@ -695,7 +647,7 @@ class OctoGoatPlugin(
 
         return self._error_response(
             status.get("error")
-            or "An active OctoGoat subscription is required before generating or using resume output.",
+            or "An active Lazarus subscription is required before generating or using resume output.",
             status_code=402,
             activation_url=self._build_activation_url(),
         )
@@ -758,7 +710,7 @@ class OctoGoatPlugin(
         self._logger.debug("Moonraker response: %s %s", response.status_code, path)
 
         if response.status_code in (401, 403):
-            raise ValueError("Moonraker authentication failed. Check the API key in OctoGoat settings.")
+            raise ValueError("Moonraker authentication failed. Check the API key in Lazarus settings.")
         if response.status_code >= 400:
             raise ValueError(self._extract_moonraker_error(response, payload))
 
@@ -834,7 +786,7 @@ class OctoGoatPlugin(
         if not resume_text:
             return dict(ok=False, error="No resume built")
 
-        filename = getattr(self, "_resume_filename", "octogoat_resume.gcode")
+        filename = getattr(self, "_resume_filename", "lazarus_resume.gcode")
         upload_and_print = self._get_bool_setting(["moonraker_upload_and_print"], False)
         if upload_and_print:
             self._moonraker_require_klippy_connected()
@@ -918,11 +870,11 @@ class OctoGoatPlugin(
 
         current_file = self._get_current_job_file()
         if not current_file:
-            raise ValueError("error, no file selected")
+            raise ValueError("No file selected.")
         if current_file.get("origin") != LOCAL_STORAGE:
             raise ValueError("Selected file must be stored in OctoPrint local storage or chosen from your device.")
         if not current_file.get("path"):
-            raise ValueError("error, no file selected")
+            raise ValueError("No file selected.")
 
         return self._read_local_storage_file(current_file["path"]), dict(
             source="octoprint",
@@ -939,11 +891,11 @@ class OctoGoatPlugin(
             raise ValueError("File read failed: %s" % e)
 
     def _build_resume_filename(self, source):
-        source_name = (source or {}).get("name") or "octogoat_resume"
+        source_name = (source or {}).get("name") or "lazarus_resume"
         stem, _extension = os.path.splitext(source_name)
         cleaned = re.sub(r"[^A-Za-z0-9._-]+", "_", stem).strip("._")
         if not cleaned:
-            cleaned = "octogoat_resume"
+            cleaned = "lazarus_resume"
         return cleaned + "_resume.gcode"
 
     def _get_printer_zmax(self):
@@ -1001,10 +953,6 @@ class OctoGoatPlugin(
 
         return 200.0
 
-    def _ensure_assumed_position_defaults(self):
-        # Leave fresh-install settings blank; runtime fallbacks are computed as needed.
-        return
-
     def _get_assumed_position_from_settings(self):
         park_x = float(self._settings.get(["park_x"]) or 20.0)
         park_y = float(self._settings.get(["park_y"]) or 20.0)
@@ -1028,19 +976,6 @@ class OctoGoatPlugin(
 
     def _get_assumed_position(self):
         return self._get_assumed_position_from_settings()
-
-    def _set_assumed_position(self, *, x, y, z):
-        zmax = self._get_printer_zmax()
-        clamped_z = max(0.0, float(z))
-        if zmax is not None:
-            clamped_z = min(zmax, clamped_z)
-
-        self._settings.set(["park_x"], float(x))
-        self._settings.set(["park_y"], float(y))
-        self._settings.set(["park_z"], clamped_z)
-        if zmax is not None:
-            self._settings.set(["park_z_offset"], max(0.0, zmax - clamped_z))
-        self._settings.save()
 
     def _save_global_settings(self):
         settings_obj = getattr(self._settings, "settings", None)
@@ -1080,7 +1015,7 @@ class OctoGoatPlugin(
 
         return all(command in PLUGIN_CANCEL_SHUTDOWN_COMMANDS for command in command_lines)
 
-    def cleanup_assumed_position_scripts(self):
+    def _cleanup_legacy_script_blocks(self):
         done_script = self._settings.global_get(["scripts", "gcode", "afterPrintDone"]) or ""
         cancelled_script = self._settings.global_get(["scripts", "gcode", "afterPrintCancelled"]) or ""
         cleaned_done, done_removed = self._strip_managed_script_blocks(done_script)
@@ -1100,9 +1035,6 @@ class OctoGoatPlugin(
         if changed:
             self._save_global_settings()
 
-        self._settings.set(["smart_park_enabled"], False)
-        self._settings.save()
-
     def _format_gcode_value(self, value):
         formatted = "{:.3f}".format(float(value))
         if "." in formatted:
@@ -1111,8 +1043,8 @@ class OctoGoatPlugin(
 
     def get_update_information(self):
         return dict(
-            octogoat=dict(
-                displayName="OctoGoat",
+            lazarus=dict(
+                displayName="Lazarus",
                 displayVersion=self._plugin_version,
                 type="github_commit",
                 user="ksmith1489",
@@ -1124,20 +1056,14 @@ class OctoGoatPlugin(
         )
 
 
-__plugin_name__ = "OctoGoat"
-__plugin_version__ = "0.1.1"
-__plugin_description__ = "Safely resume failed 3D prints with guided alignment, local resume G-code generation, and Klipper/Moonraker support."
-__plugin_author__ = "ksmith1489"
-__plugin_author_email__ = "ksmith1489@protonmail.com"
-__plugin_url__ = "https://app.lazarus3dprint.com"
-__plugin_license__ = "Proprietary https://app.lazarus3dprint.com/license"
+__plugin_name__ = "Lazarus"
 __plugin_privacypolicy__ = "https://app.lazarus3dprint.com/privacy"
 __plugin_pythoncompat__ = ">=3.7,<4"
 
 
 def __plugin_load__():
     global __plugin_implementation__
-    __plugin_implementation__ = OctoGoatPlugin()
+    __plugin_implementation__ = LazarusPlugin()
     global __plugin_hooks__
     __plugin_hooks__ = {
         "octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information

@@ -1,9 +1,9 @@
 $(function () {
 
-    function OctoGoatViewModel(parameters) {
+    function LazarusViewModel(parameters) {
         var self = this;
-        var localFileInputSelector = "#octogoat-local-file-input";
-        var dropzoneSelector = "#tab_plugin_octogoat .octogoat-file-dropzone";
+        var localFileInputSelector = "#lazarus-local-file-input";
+        var dropzoneSelector = "#tab_plugin_lazarus .lazarus-file-dropzone";
 
         self.settingsViewModel = parameters[0];
 
@@ -17,7 +17,6 @@ $(function () {
         });
 
         self.resumeBuilt = ko.observable(false);
-        self.resumeZ = ko.observable("");
         self.datumX = ko.observable("");
         self.datumY = ko.observable("");
         self.datumZ = ko.observable("");
@@ -31,11 +30,9 @@ $(function () {
         self.safeStartApplied = ko.observable(false);
         self.attestCurrentCoordinates = ko.observable(false);
         self.useAssumedPositionCoordinates = ko.observable(false);
-        self.safeResumeHomingStatus = ko.observable("");
-
         self.availableFiles = ko.observableArray([]);
         self.selectedServerFilePath = ko.observable("");
-        self.selectedFileLabel = ko.observable("no file selected");
+        self.selectedFileLabel = ko.observable("No file selected");
         self.selectedSourceType = ko.observable("");
         self.uploadedGcodeText = ko.observable("");
         self.uploadedFileName = ko.observable("");
@@ -66,7 +63,7 @@ $(function () {
         }
 
         function api(cmd, payload) {
-            return OctoPrint.simpleApiCommand("octogoat", cmd, payload || {});
+            return OctoPrint.simpleApiCommand("lazarus", cmd, payload || {});
         }
 
         function getApiBaseUrl() {
@@ -79,9 +76,9 @@ $(function () {
             if (self.settingsViewModel &&
                 self.settingsViewModel.settings &&
                 self.settingsViewModel.settings.plugins &&
-                self.settingsViewModel.settings.plugins.octogoat &&
-                typeof self.settingsViewModel.settings.plugins.octogoat.engine_url === "function") {
-                engineUrl = $.trim(self.settingsViewModel.settings.plugins.octogoat.engine_url() || "");
+                self.settingsViewModel.settings.plugins.lazarus &&
+                typeof self.settingsViewModel.settings.plugins.lazarus.engine_url === "function") {
+                engineUrl = $.trim(self.settingsViewModel.settings.plugins.lazarus.engine_url() || "");
             }
 
             if (!engineUrl) {
@@ -95,9 +92,9 @@ $(function () {
             if (self.settingsViewModel &&
                 self.settingsViewModel.settings &&
                 self.settingsViewModel.settings.plugins &&
-                self.settingsViewModel.settings.plugins.octogoat &&
-                typeof self.settingsViewModel.settings.plugins.octogoat.install_id === "function") {
-                return $.trim(self.settingsViewModel.settings.plugins.octogoat.install_id() || "");
+                self.settingsViewModel.settings.plugins.lazarus &&
+                typeof self.settingsViewModel.settings.plugins.lazarus.install_id === "function") {
+                return $.trim(self.settingsViewModel.settings.plugins.lazarus.install_id() || "");
             }
 
             return "";
@@ -108,7 +105,7 @@ $(function () {
         }
 
         function getResumeDownloadUrl() {
-            return getApiBaseUrl() + "plugin/octogoat?download_resume=1&_ts=" + Date.now();
+            return getApiBaseUrl() + "plugin/lazarus?download_resume=1&_ts=" + Date.now();
         }
 
         function getActivationUrl() {
@@ -154,7 +151,6 @@ $(function () {
 
         function resetResumeState() {
             self.resumeBuilt(false);
-            self.resumeZ("");
             self.datumX("");
             self.datumY("");
             self.datumZ("");
@@ -163,7 +159,6 @@ $(function () {
             self.buildInProgress(false);
             self.attestCurrentCoordinates(false);
             self.useAssumedPositionCoordinates(false);
-            self.safeResumeHomingStatus("");
             self.motionAcknowledged(false);
             self.safeStartApplied(false);
         }
@@ -205,7 +200,7 @@ $(function () {
         function setSelectedUploadedFile(file) {
             self.selectedSourceType("device");
             self.selectedServerFilePath("");
-            self.selectedFileLabel(file && file.name ? file.name : "no file selected");
+            self.selectedFileLabel(file && file.name ? file.name : "No file selected");
             self.uploadedGcodeText("");
             self.uploadedFileName(file && file.name ? file.name : "");
             self.uploadedFileObject = file || null;
@@ -221,7 +216,7 @@ $(function () {
 
             self.selectedSourceType("");
             self.selectedServerFilePath("");
-            self.selectedFileLabel("no file selected");
+            self.selectedFileLabel("No file selected");
             self.uploadedGcodeText("");
             self.uploadedFileName("");
             self.uploadedFileObject = null;
@@ -386,7 +381,7 @@ $(function () {
             if (!file) {
                 deferred.reject({
                     responseJSON: {
-                        error: "error, no file selected"
+                        error: "No file selected."
                     }
                 });
                 return deferred.promise();
@@ -447,10 +442,8 @@ $(function () {
                 return;
             }
 
-            self.resumeZ(resp.resume_z || "");
             self.attestCurrentCoordinates(false);
             self.useAssumedPositionCoordinates(false);
-            self.safeResumeHomingStatus("");
             self.safeStartApplied(false);
 
             if (resp.datum) {
@@ -467,12 +460,12 @@ $(function () {
                 self.selectedFileLabel(resp.file.name);
             }
 
-            self.resumeFileName(resp.resume_file_name || "octogoat_resume.gcode");
+            self.resumeFileName(resp.resume_file_name || "lazarus_resume.gcode");
             self.previewText(resp.preview ? resp.preview.join("\n") : "");
             self.motionAcknowledged(false);
             self.resumeBuilt(true);
 
-            notify("Your safe _resume.gcode is ready", "True Alignment Point has been calculated.", "notice");
+            notify("Resume G-code Ready", "The true alignment point has been calculated.", "notice");
         }
 
         function requestBuildResume(payload) {
@@ -487,7 +480,7 @@ $(function () {
                         "Error",
                         getAjaxErrorMessage(
                             xhr,
-                            "Resume build request failed. If you selected a large local GCODE file, wait a few seconds and try once."
+                            "Resume build request failed. If you selected a large local G-code file, wait a few seconds and try again."
                         ),
                         "error"
                     );
@@ -601,34 +594,6 @@ $(function () {
             $(localFileInputSelector).trigger("click");
         };
 
-        self.saveAssumedPosition = function () {
-            var x = parseFloat(self.parkX());
-            var y = parseFloat(self.parkY());
-            var z = parseFloat(self.parkZ());
-
-            if (isNaN(x) || isNaN(y) || isNaN(z)) {
-                notify("Input Error", "Assumed position requires valid X, Y and Z values.", "error");
-                return;
-            }
-
-            api("set_assumed_position", {
-                x: x,
-                y: y,
-                z: z
-            })
-                .done(function (resp) {
-                    if (!resp || resp.ok !== true) {
-                        notify("Error", resp && resp.error ? resp.error : "Assumed position save failed", "error");
-                        return;
-                    }
-
-                    updateParkFields(resp.park);
-                })
-                .fail(function (xhr) {
-                    notify("Error", getAjaxErrorMessage(xhr, "Assumed position save failed"), "error");
-                });
-        };
-
         self.validateInputs = function () {
             var measuredHeight = parseFloat(self.measuredHeight());
 
@@ -638,7 +603,7 @@ $(function () {
             }
 
             if (!hasSelectedFile()) {
-                notify("Input Error", "error, no file selected", "error");
+                notify("Input Error", "No file selected.", "error");
                 return false;
             }
 
@@ -708,7 +673,6 @@ $(function () {
                     self.attestCurrentCoordinates(false);
                     self.useAssumedPositionCoordinates(false);
                     self.safeStartApplied(true);
-                    self.safeResumeHomingStatus(resp.message || "Safe Resume Homing started.");
                     $("#safe-resume-homing-modal").modal("hide");
                     notify("Safe Resume Homing", resp.message || "X/Y homing started.", "success");
                 })
@@ -732,7 +696,6 @@ $(function () {
 
                     self.attestCurrentCoordinates(false);
                     self.safeStartApplied(true);
-                    self.safeResumeHomingStatus(resp.message || "Assumed position coordinates applied.");
                     $("#safe-resume-homing-modal").modal("hide");
                     notify("Assumed Position", resp.message || "Toolhead reference position applied.", "success");
                 })
@@ -756,7 +719,11 @@ $(function () {
                         return;
                     }
 
-                    notify("Your toolhead has been moved over the true alignment point and is ready for precision alignment.", "success");
+                    notify(
+                        "Alignment Point Reached",
+                        "The toolhead is over the true alignment point and ready for precision alignment.",
+                        "success"
+                    );
                 })
                 .fail(function (xhr) {
                     notify("Error", getAjaxErrorMessage(xhr, "Move failed"), "error");
@@ -802,13 +769,13 @@ $(function () {
             var link;
 
             if (!self.canDownloadResume()) {
-                notify("Resume File", "Build the resume GCODE first.", "notice");
+                notify("Resume File", "Build the resume G-code first.", "notice");
                 return;
             }
 
             link = document.createElement("a");
             link.href = getResumeDownloadUrl();
-            link.download = self.resumeFileName() || "octogoat_resume.gcode";
+            link.download = self.resumeFileName() || "lazarus_resume.gcode";
             link.style.display = "none";
             document.body.appendChild(link);
             link.click();
@@ -822,7 +789,7 @@ $(function () {
             }
 
             if (!self.motionAcknowledged()) {
-                notify("Safety", "You must acknowledge printer motion", "notice");
+                notify("Safety", "Confirm that printer motion is safe before resuming.", "notice");
                 return;
             }
 
@@ -833,7 +800,7 @@ $(function () {
                         return;
                     }
 
-                    notify("OctoGOAT", resp.message || "Resume sequence started", "success");
+                    notify("Lazarus", resp.message || "Resume sequence started", "success");
                 })
                 .fail(function (xhr) {
                     notify("Error", getAjaxErrorMessage(xhr, "Resume failed"), "error");
@@ -854,13 +821,11 @@ $(function () {
             if (isAttested) {
                 self.useAssumedPositionCoordinates(false);
                 self.safeStartApplied(true);
-                self.safeResumeHomingStatus("Current coordinate state attested.");
                 return;
             }
 
             if (!self.useAssumedPositionCoordinates()) {
                 self.safeStartApplied(false);
-                self.safeResumeHomingStatus("");
             }
         });
 
@@ -872,13 +837,12 @@ $(function () {
 
             if (!self.attestCurrentCoordinates()) {
                 self.safeStartApplied(false);
-                self.safeResumeHomingStatus("");
             }
         });
 
         self.bindFilePicker = function () {
-            $(document).off("change.octogoat", localFileInputSelector);
-            $(document).on("change.octogoat", localFileInputSelector, function (event) {
+            $(document).off("change.lazarus", localFileInputSelector);
+            $(document).on("change.lazarus", localFileInputSelector, function (event) {
                 var files = event.target.files || [];
                 if (files.length) {
                     readLocalFile(files[0]);
@@ -888,21 +852,21 @@ $(function () {
         };
 
         self.bindDropzone = function () {
-            $(document).off("dragenter.octogoat dragover.octogoat dragleave.octogoat drop.octogoat", dropzoneSelector);
+            $(document).off("dragenter.lazarus dragover.lazarus dragleave.lazarus drop.lazarus", dropzoneSelector);
 
-            $(document).on("dragenter.octogoat dragover.octogoat", dropzoneSelector, function (event) {
+            $(document).on("dragenter.lazarus dragover.lazarus", dropzoneSelector, function (event) {
                 event.preventDefault();
                 event.stopPropagation();
                 self.isDraggingFile(true);
             });
 
-            $(document).on("dragleave.octogoat", dropzoneSelector, function (event) {
+            $(document).on("dragleave.lazarus", dropzoneSelector, function (event) {
                 event.preventDefault();
                 event.stopPropagation();
                 self.isDraggingFile(false);
             });
 
-            $(document).on("drop.octogoat", dropzoneSelector, function (event) {
+            $(document).on("drop.lazarus", dropzoneSelector, function (event) {
                 var nativeEvent = event.originalEvent;
                 var transfer = nativeEvent ? nativeEvent.dataTransfer : null;
                 var droppedFile;
@@ -948,7 +912,7 @@ $(function () {
         };
 
         self.onTabChange = function (current) {
-            if (current === "#tab_plugin_octogoat") {
+            if (current === "#tab_plugin_lazarus") {
                 self.validateLicense();
                 self.loadStatus();
                 self.loadAvailableFiles();
@@ -957,9 +921,9 @@ $(function () {
     }
 
     OCTOPRINT_VIEWMODELS.push({
-        construct: OctoGoatViewModel,
+        construct: LazarusViewModel,
         dependencies: ["settingsViewModel"],
-        elements: ["#tab_plugin_octogoat"]
+        elements: ["#tab_plugin_lazarus"]
     });
 
 });
