@@ -32,5 +32,5 @@ lazarus = "octoprint_lazarus"
 
 [project.urls]
 Homepage = "https://app.lazarus3dprint.com"
-Source = "https://github.com/ksmith1489/octogoat-plugin"
+Source = "https://github.com/ksmith1489/lazarus-plugin"
 Documentation = "https://app.lazarus3dprint.com/activate"

@@ -1048,10 +1048,10 @@ class LazarusPlugin(
                 displayVersion=self._plugin_version,
                 type="github_commit",
                 user="ksmith1489",
-                repo="octogoat-plugin",
+                repo="lazarus-plugin",
                 branch="main",
                 current=self._plugin_version,
-                pip="https://github.com/ksmith1489/octogoat-plugin/archive/{target}.zip",
+                pip="https://github.com/ksmith1489/lazarus-plugin/archive/{target}.zip",
             )
         )
 
