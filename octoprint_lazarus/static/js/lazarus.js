@@ -527,9 +527,8 @@ $(function () {
                 });
         };
 
-        self.setControlModeFromToggle = function () {
-            var desiredMode = self.moonrakerMode() ? "moonraker" : "octoprint";
-
+        self.setControlMode = function (desiredMode) {
+            desiredMode = desiredMode === "moonraker" ? "moonraker" : "octoprint";
             api("set_control_mode", {
                 control_mode: desiredMode
             })
@@ -555,6 +554,10 @@ $(function () {
                     notify("Error", getAjaxErrorMessage(xhr, "Control mode update failed"), "error");
                     self.loadStatus();
                 });
+        };
+
+        self.toggleControlMode = function () {
+            self.setControlMode(self.moonrakerMode() ? "octoprint" : "moonraker");
         };
 
         self.testMoonraker = function () {

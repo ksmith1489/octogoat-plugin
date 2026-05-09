@@ -67,7 +67,8 @@
 .lazarus-download-btn,
 .lazarus-resume-btn,
 .lazarus-failsafe-btn,
-.lazarus-moonraker-test-btn {
+.lazarus-moonraker-test-btn,
+.lazarus-toggle-btn {
     border-radius: 8px;
     font-weight: 600;
     min-height: 40px;
@@ -76,7 +77,8 @@
 .lazarus-nav-btn,
 .lazarus-function-btn,
 .lazarus-failsafe-btn,
-.lazarus-moonraker-test-btn {
+.lazarus-moonraker-test-btn,
+.lazarus-toggle-btn {
     background: var(--lazarus-panel-alt);
     border: 1px solid var(--lazarus-border);
     color: var(--lazarus-text);
@@ -106,6 +108,46 @@
     font-size: 14px;
     line-height: 1.5;
     margin: 10px 0 16px;
+}
+
+.lazarus-mode-card {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: space-between;
+}
+
+.lazarus-mode-copy {
+    flex: 1 1 340px;
+}
+
+.lazarus-mode-copy .lazarus-help-text {
+    margin-bottom: 0;
+}
+
+.lazarus-mode-controls {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.lazarus-toggle-btn.is-enabled {
+    background: #e6f4ec;
+    border-color: #9dc4ae;
+    color: var(--lazarus-success);
+}
+
+.lazarus-mode-state {
+    display: inline-block;
+    margin-left: 8px;
+    min-width: 30px;
+    text-align: center;
+}
+
+.lazarus-mode-state.is-enabled {
+    color: var(--lazarus-success);
 }
 
 .lazarus-card {
@@ -292,15 +334,52 @@
     opacity: 0.55;
 }
 
+#settings_plugin_lazarus .lazarus-settings-form {
+    margin: 0;
+}
+
+#settings_plugin_lazarus .lazarus-settings-intro {
+    color: var(--lazarus-muted);
+    margin: 0 0 18px;
+    max-width: 720px;
+}
+
+#settings_plugin_lazarus .controls input[type="text"],
+#settings_plugin_lazarus .controls input[type="password"],
+#settings_plugin_lazarus .controls input[type="number"],
+#settings_plugin_lazarus .controls select {
+    box-sizing: border-box;
+    max-width: 540px;
+    width: 100%;
+}
+
+#settings_plugin_lazarus .lazarus-axis-row input[type="number"] {
+    max-width: none;
+}
+
+#settings_plugin_lazarus .lazarus-axis-label {
+    color: var(--lazarus-muted);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+#settings_plugin_lazarus .help-block {
+    max-width: 720px;
+}
+
 @media (max-width: 767px) {
     .lazarus-nav-row,
-    .lazarus-stage-header {
+    .lazarus-stage-header,
+    .lazarus-mode-card {
         align-items: stretch;
         flex-direction: column;
     }
 
     .lazarus-nav-left,
     .lazarus-nav-right,
+    .lazarus-mode-controls,
     .lazarus-resume-actions,
     .lazarus-file-selector-controls,
     .lazarus-failsafe-row {

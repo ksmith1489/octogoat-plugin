@@ -53,6 +53,34 @@
             Pricing and activation happen on the Lazarus website, outside OctoPrint.
         </div>
 
+        <div class="lazarus-card lazarus-mode-card">
+            <div class="lazarus-mode-copy">
+                <div class="lazarus-standard-label">Printer Control Mode</div>
+                <h4>Motion Command Path</h4>
+                <p class="lazarus-help-text">
+                    Use standard OctoPrint motion commands, or switch to Moonraker / Klipper mode for printers controlled through Moonraker.
+                </p>
+            </div>
+
+            <div class="lazarus-mode-controls">
+                <button class="btn lazarus-toggle-btn"
+                        type="button"
+                        data-bind="click: toggleControlMode, css: { 'is-enabled': moonrakerMode() }"
+                        title="Switch between OctoPrint mode and Moonraker / Klipper mode.">
+                    Moonraker / Klipper:
+                    <span class="lazarus-mode-state"
+                          data-bind="text: moonrakerModeLabel, css: { 'is-enabled': moonrakerMode() }"></span>
+                </button>
+
+                <button class="btn lazarus-moonraker-test-btn"
+                        type="button"
+                        data-bind="click: testMoonraker, visible: moonrakerMode"
+                        title="Verify that Moonraker and Klippy are reachable.">
+                    Test Connection
+                </button>
+            </div>
+        </div>
+
         <div class="lazarus-card">
             <div class="lazarus-inputs-head">
                 <h4>Source File</h4>

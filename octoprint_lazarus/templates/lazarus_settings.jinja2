@@ -1,10 +1,14 @@
-<div class="section">
+<form class="form-horizontal lazarus-settings-form">
   <h3>Lazarus Settings</h3>
+  <p class="lazarus-settings-intro">
+    Configure printer behavior, licensing, and optional Moonraker connectivity for Lazarus.
+  </p>
 
   <div class="control-group">
-    <label class="control-label">Firmware Type</label>
+    <label class="control-label" for="settings_plugin_lazarus_firmware_type">Firmware Type</label>
     <div class="controls">
-      <select data-bind="value: settings.plugins.lazarus.firmware_type">
+      <select id="settings_plugin_lazarus_firmware_type"
+              data-bind="value: settings.plugins.lazarus.firmware_type">
         <option value="klipper">Klipper</option>
         <option value="marlin">Marlin</option>
       </select>
@@ -15,9 +19,10 @@
   </div>
 
   <div class="control-group">
-    <label class="control-label">License Service URL</label>
+    <label class="control-label" for="settings_plugin_lazarus_engine_url">License Service URL</label>
     <div class="controls">
-      <input type="text"
+      <input id="settings_plugin_lazarus_engine_url"
+             type="text"
              class="input-block-level"
              data-bind="value: settings.plugins.lazarus.engine_url">
       <p class="help-block">
@@ -29,26 +34,29 @@
   <div class="control-group">
     <label class="control-label">Saved Assumed Position</label>
     <div class="controls">
-      <div class="row-fluid">
+      <div class="row-fluid lazarus-axis-row">
         <div class="span4">
-          <label>X</label>
-          <input type="number"
+          <label class="lazarus-axis-label" for="settings_plugin_lazarus_park_x">X</label>
+          <input id="settings_plugin_lazarus_park_x"
+                 type="number"
                  step="0.01"
                  class="input-block-level"
                  data-bind="value: settings.plugins.lazarus.park_x">
         </div>
 
         <div class="span4">
-          <label>Y</label>
-          <input type="number"
+          <label class="lazarus-axis-label" for="settings_plugin_lazarus_park_y">Y</label>
+          <input id="settings_plugin_lazarus_park_y"
+                 type="number"
                  step="0.01"
                  class="input-block-level"
                  data-bind="value: settings.plugins.lazarus.park_y">
         </div>
 
         <div class="span4">
-          <label>Z</label>
-          <input type="number"
+          <label class="lazarus-axis-label" for="settings_plugin_lazarus_park_z">Z</label>
+          <input id="settings_plugin_lazarus_park_z"
+                 type="number"
                  step="0.01"
                  class="input-block-level"
                  data-bind="value: settings.plugins.lazarus.park_z">
@@ -62,9 +70,25 @@
   </div>
 
   <div class="control-group">
-    <label class="control-label">Advanced Z Max Override (mm)</label>
+    <label class="control-label" for="settings_plugin_lazarus_safe_z_hop">Safe Z Hop (mm)</label>
     <div class="controls">
-      <input type="number"
+      <input id="settings_plugin_lazarus_safe_z_hop"
+             type="number"
+             min="0"
+             step="0.01"
+             class="input-block-level"
+             data-bind="value: settings.plugins.lazarus.safe_z_hop">
+      <p class="help-block">
+        Extra clearance added after Position Calibrated locks the alignment point.
+      </p>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label class="control-label" for="settings_plugin_lazarus_z_max_override_mm">Advanced Z Max Override (mm)</label>
+    <div class="controls">
+      <input id="settings_plugin_lazarus_z_max_override_mm"
+             type="number"
              min="0"
              step="0.01"
              class="input-block-level"
@@ -80,9 +104,10 @@
   <h3>Moonraker / Klipper Mode</h3>
 
   <div class="control-group">
-    <label class="control-label">Moonraker URL</label>
+    <label class="control-label" for="settings_plugin_lazarus_moonraker_url">Moonraker URL</label>
     <div class="controls">
-      <input type="text"
+      <input id="settings_plugin_lazarus_moonraker_url"
+             type="text"
              class="input-block-level"
              placeholder="http://printer.local:7125"
              data-bind="value: settings.plugins.lazarus.moonraker_url">
@@ -93,9 +118,10 @@
   </div>
 
   <div class="control-group">
-    <label class="control-label">Moonraker API Key</label>
+    <label class="control-label" for="settings_plugin_lazarus_moonraker_api_key">Moonraker API Key</label>
     <div class="controls">
-      <input type="password"
+      <input id="settings_plugin_lazarus_moonraker_api_key"
+             type="password"
              class="input-block-level"
              data-bind="value: settings.plugins.lazarus.moonraker_api_key">
       <p class="help-block">
@@ -107,26 +133,29 @@
   <div class="control-group">
     <label class="control-label">Moonraker Assumed Position</label>
     <div class="controls">
-      <div class="row-fluid">
+      <div class="row-fluid lazarus-axis-row">
         <div class="span4">
-          <label>X</label>
-          <input type="number"
+          <label class="lazarus-axis-label" for="settings_plugin_lazarus_moonraker_park_x">X</label>
+          <input id="settings_plugin_lazarus_moonraker_park_x"
+                 type="number"
                  step="0.01"
                  class="input-block-level"
                  data-bind="value: settings.plugins.lazarus.moonraker_park_x">
         </div>
 
         <div class="span4">
-          <label>Y</label>
-          <input type="number"
+          <label class="lazarus-axis-label" for="settings_plugin_lazarus_moonraker_park_y">Y</label>
+          <input id="settings_plugin_lazarus_moonraker_park_y"
+                 type="number"
                  step="0.01"
                  class="input-block-level"
                  data-bind="value: settings.plugins.lazarus.moonraker_park_y">
         </div>
 
         <div class="span4">
-          <label>Z</label>
-          <input type="number"
+          <label class="lazarus-axis-label" for="settings_plugin_lazarus_moonraker_park_z">Z</label>
+          <input id="settings_plugin_lazarus_moonraker_park_z"
+                 type="number"
                  step="0.01"
                  class="input-block-level"
                  data-bind="value: settings.plugins.lazarus.moonraker_park_z">
@@ -154,13 +183,14 @@
   </div>
 
   <div class="control-group">
-    <label class="control-label">Moonraker Timeout (seconds)</label>
+    <label class="control-label" for="settings_plugin_lazarus_moonraker_timeout_seconds">Moonraker Timeout (seconds)</label>
     <div class="controls">
-      <input type="number"
+      <input id="settings_plugin_lazarus_moonraker_timeout_seconds"
+             type="number"
              min="1"
              step="1"
              class="input-block-level"
              data-bind="value: settings.plugins.lazarus.moonraker_timeout_seconds">
     </div>
   </div>
-</div>
+</form>
