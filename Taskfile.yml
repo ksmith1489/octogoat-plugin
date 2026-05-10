@@ -1,0 +1,17 @@
+version: "3"
+
+tasks:
+  test:
+    desc: Run the Lazarus resume engine regression tests
+    cmds:
+      - python3 -m unittest tests.test_resume_engine
+
+  compile:
+    desc: Compile the plugin package to catch syntax issues
+    cmds:
+      - python3 -m compileall octoprint_lazarus
+
+  clean:
+    desc: Remove local Python cache directories
+    cmds:
+      - find . -type d -name __pycache__ -prune -exec rm -rf {} +

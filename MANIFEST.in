@@ -1,0 +1,12 @@
+include README.md
+include LICENSE.txt
+include PRIVACY.md
+include TERMS.md
+include requirements.txt
+include babel.cfg
+
+recursive-include octoprint_lazarus/templates *.jinja2
+recursive-include octoprint_lazarus/static *
+
+global-exclude *.py[cod]
+global-exclude __pycache__/*

@@ -60,7 +60,7 @@ This is a fresh registration under `Lazarus` after the previous `OctoGoat` submi
 This resubmission addresses the review items raised on `#1435`:
 
 - the plugin has been renamed from `OctoGoat` to `Lazarus`;
-- packaging has been migrated to `pyproject.toml`;
+- packaging has been migrated to `pyproject.toml`, and the repository layout has been aligned with the current OctoPrint cookiecutter-style scaffold while avoiding the legacy `setup.py` packaging path;
 - the promotional / watermarked hero assets were removed and the UI copy was simplified;
 - unused settings, no-op startup code, and unreferenced API / frontend paths were removed;
 - checkout remains outside OctoPrint, and the plugin keeps server-side permission checks, server-side license enforcement, the privacy policy link, and the software update hook;
