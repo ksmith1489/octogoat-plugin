@@ -18,6 +18,8 @@ from .resume_engine import build_resumed_gcode
 
 
 MONTH_SECONDS = 30 * 24 * 60 * 60
+LEGACY_PLUGIN_ID = "octogoat"
+INSTALL_ID_FILENAME = "install_id.json"
 # Legacy markers from earlier builds, kept only so startup can remove stale managed script blocks.
 ASSUMED_POSITION_MARKER_START = "; --- OctoGOAT Assumed Position ---"
 ASSUMED_POSITION_MARKER_END = "; --- End OctoGOAT Assumed Position ---"
@@ -108,6 +110,11 @@ class LazarusPlugin(
 
     def on_after_startup(self):
         try:
+            self._ensure_install_id()
+        except Exception as e:
+            self._logger.error("Install ID initialization failed: %s" % e)
+
+        try:
             self._cleanup_legacy_script_blocks()
         except Exception as e:
             self._logger.error("Legacy startup cleanup failed: %s" % e)
@@ -158,6 +165,7 @@ class LazarusPlugin(
         if command == "status":
             return dict(
                 ok=True,
+                install_id=self._get_install_id(),
                 control_mode=self._get_control_mode(),
                 moonraker_mode=self._is_moonraker_mode(),
                 park=self._get_control_park_position(),
@@ -481,7 +489,7 @@ class LazarusPlugin(
         if not engine_url:
             engine_url = "https://app.lazarus3dprint.com"
 
-        install_id = str(self._settings.get(["install_id"]) or "").strip()
+        install_id = self._get_install_id()
         if install_id:
             return "{base}/activate?install_id={install_id}".format(
                 base=engine_url,
@@ -533,6 +541,82 @@ class LazarusPlugin(
     def _license_cache_path(self):
         return os.path.join(self.get_plugin_data_folder(), "license_cache.json")
 
+    def _install_id_path(self):
+        return os.path.join(self.get_plugin_data_folder(), INSTALL_ID_FILENAME)
+
+    def _load_install_id_cache(self):
+        try:
+            with open(self._install_id_path(), "r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+        except Exception:
+            return ""
+
+        if isinstance(payload, dict):
+            return str(payload.get("install_id") or "").strip()
+        if isinstance(payload, str):
+            return payload.strip()
+        return ""
+
+    def _save_install_id_cache(self, install_id):
+        install_id = str(install_id or "").strip()
+        if not install_id:
+            return
+
+        path = self._install_id_path()
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump(dict(install_id=install_id), handle, indent=2, sort_keys=True)
+
+    def _get_install_id(self):
+        install_id = str(self._settings.get(["install_id"]) or "").strip()
+        if install_id:
+            return install_id
+
+        install_id = self._load_install_id_cache()
+        if install_id:
+            return install_id
+
+        return ""
+
+    def _get_legacy_install_id(self):
+        try:
+            legacy_install_id = self._settings.global_get(["plugins", LEGACY_PLUGIN_ID, "install_id"])
+        except Exception:
+            legacy_install_id = None
+        return str(legacy_install_id or "").strip()
+
+    def _ensure_install_id(self):
+        install_id = self._get_install_id()
+        source = "current settings or cache"
+
+        if not install_id:
+            install_id = self._get_legacy_install_id()
+            source = "legacy OctoGoat settings"
+
+        if not install_id:
+            cached_license = self._load_license_cache()
+            install_id = str(cached_license.get("install_id") or "").strip()
+            source = "license cache"
+
+        if not install_id:
+            install_id = str(uuid.uuid4())
+            source = "newly generated"
+
+        changed = False
+        current_settings_install_id = str(self._settings.get(["install_id"]) or "").strip()
+        if current_settings_install_id != install_id:
+            self._settings.set(["install_id"], install_id)
+            changed = True
+
+        if self._load_install_id_cache() != install_id:
+            self._save_install_id_cache(install_id)
+
+        if changed:
+            self._settings.save()
+
+        self._logger.info("Lazarus install ID ready from %s", source)
+        return install_id
+
     def _load_license_cache(self):
         try:
             with open(self._license_cache_path(), "r", encoding="utf-8") as handle:
@@ -560,7 +644,7 @@ class LazarusPlugin(
         if now is None:
             now = int(time.time())
 
-        install_id = str(self._settings.get(["install_id"]) or "").strip()
+        install_id = self._get_install_id()
         cache = self._load_license_cache()
         cached_install_id = str(cache.get("install_id") or "").strip()
 
@@ -586,7 +670,7 @@ class LazarusPlugin(
         if cached["valid"]:
             return cached
 
-        install_id = str(self._settings.get(["install_id"]) or "").strip()
+        install_id = self._get_install_id()
         if not install_id:
             self._clear_license_cache()
             return dict(

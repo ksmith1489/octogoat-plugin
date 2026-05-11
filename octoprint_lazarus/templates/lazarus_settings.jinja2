@@ -19,6 +19,20 @@
   </div>
 
   <div class="control-group">
+    <label class="control-label" for="settings_plugin_lazarus_install_id">Install ID</label>
+    <div class="controls">
+      <input id="settings_plugin_lazarus_install_id"
+             type="text"
+             class="input-block-level"
+             readonly
+             data-bind="value: settings.plugins.lazarus.install_id">
+      <p class="help-block">
+        This install ID is stored locally in OctoPrint and is used when linking Lazarus activation to this printer.
+      </p>
+    </div>
+  </div>
+
+  <div class="control-group">
     <label class="control-label" for="settings_plugin_lazarus_engine_url">License Service URL</label>
     <div class="controls">
       <input id="settings_plugin_lazarus_engine_url"
